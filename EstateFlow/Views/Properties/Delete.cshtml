@@ -1,0 +1,27 @@
+﻿@model EstateFlow.Models.Property
+@{
+    ViewData["Title"] = "Изтриване: " + Model.ReferenceNumber;
+}
+
+<h1 class="h3 mb-3">Изтриване на обява</h1>
+<div class="alert alert-warning">Сигурни ли сте, че искате да изтриете тази обява завинаги?</div>
+<div class="card shadow-sm border-danger">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.ReferenceNumber)</dt>
+            <dd class="col-sm-9 fw-bold">@Model.ReferenceNumber</dd>
+
+            <dt class="col-sm-3">Обект</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Type) в @Model.City, @Model.Neighborhood</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Price)</dt>
+            <dd class="col-sm-9 text-danger fw-bold">@Model.Price.ToString("N0") €</dd>
+        </dl>
+    </div>
+    <div class="card-footer">
+        <form asp-action="Delete" asp-route-id="@Model.Id" class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Изтрий обявата</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Отказ</a>
+        </form>
+    </div>
+</div>

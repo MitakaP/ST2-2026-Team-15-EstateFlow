@@ -1,0 +1,58 @@
+﻿@model EstateFlow.Models.Property
+@{
+    ViewData["Title"] = "Детайли: " + Model.ReferenceNumber;
+}
+
+<h1 class="h3 mb-3">Обява: @Model.ReferenceNumber</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title text-primary mb-4">Основна информация</h5>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Type)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Type)</dd>
+
+            <dt class="col-sm-3">Цена</dt>
+            <dd class="col-sm-9 fw-bold text-success">@Model.Price.ToString("N0") €</dd>
+
+            <dt class="col-sm-3">Площ</dt>
+            <dd class="col-sm-9">@Model.Area кв.м.</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Rooms)</dt>
+            <dd class="col-sm-9">@(Model.Rooms?.ToString() ?? "—")</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Floor)</dt>
+            <dd class="col-sm-9">@(Model.Floor?.ToString() ?? "—")</dd>
+        </dl>
+
+        <hr />
+        <h5 class="card-title text-primary mb-4">Локация</h5>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.City)</dt>
+            <dd class="col-sm-9">@Model.City</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Neighborhood)</dt>
+            <dd class="col-sm-9">@Model.Neighborhood</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Street)</dt>
+            <dd class="col-sm-9">@(Model.Street ?? "—")</dd>
+        </dl>
+
+        <hr />
+        <h5 class="card-title text-primary mb-4">Контакти с брокер</h5>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Телефон</dt>
+            <dd class="col-sm-9">@Model.ContactPhone</dd>
+
+            <dt class="col-sm-3">Имейл</dt>
+            <dd class="col-sm-9"><a href="mailto:@Model.ContactEmail">@Model.ContactEmail</a></dd>
+        </dl>
+
+        <hr />
+        <h5 class="card-title text-primary mb-3">Описание</h5>
+        <p class="text-muted" style="white-space: pre-wrap;">@(Model.Description ?? "Няма добавено описание.")</p>
+    </div>
+    <div class="card-footer d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Редакция</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Назад</a>
+    </div>
+</div>

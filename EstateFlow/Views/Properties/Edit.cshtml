@@ -1,0 +1,21 @@
+﻿@model EstateFlow.Models.Property
+@{
+    ViewData["Title"] = "Редакция на обява";
+}
+
+<h1 class="h3 mb-3">Редакция: @Model.ReferenceNumber</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.Id" novalidate>
+            <partial name="_PropertyForm" model="Model" />
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Запис</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Отказ</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

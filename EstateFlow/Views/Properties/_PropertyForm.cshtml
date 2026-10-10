@@ -1,0 +1,79 @@
+﻿@model EstateFlow.Models.Property
+
+<input type="hidden" asp-for="Id" />
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="ReferenceNumber" class="form-label"></label>
+        <input asp-for="ReferenceNumber" class="form-control" placeholder="напр. SOF-12345" autocomplete="off" />
+        <span asp-validation-for="ReferenceNumber" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Type" class="form-label"></label>
+        <select asp-for="Type" asp-items="Html.GetEnumSelectList<PropertyType>()" class="form-select">
+            <option value="">-- Изберете вид --</option>
+        </select>
+        <span asp-validation-for="Type" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control" placeholder="напр. София" />
+        <span asp-validation-for="City" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Neighborhood" class="form-label"></label>
+        <input asp-for="Neighborhood" class="form-control" placeholder="напр. Младост 1" />
+        <span asp-validation-for="Neighborhood" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Street" class="form-label"></label>
+        <input asp-for="Street" class="form-control" placeholder="напр. ул. Александър Малинов 34" />
+        <span asp-validation-for="Street" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="Price" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="Price" class="form-control" />
+            <span class="input-group-text">€</span>
+        </div>
+        <span asp-validation-for="Price" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Area" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="Area" class="form-control" />
+            <span class="input-group-text">кв.м.</span>
+        </div>
+        <span asp-validation-for="Area" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Rooms" class="form-label"></label>
+        <input asp-for="Rooms" class="form-control" />
+        <span asp-validation-for="Rooms" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Floor" class="form-label"></label>
+        <input asp-for="Floor" class="form-control" />
+        <span asp-validation-for="Floor" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="ContactPhone" class="form-label"></label>
+        <input asp-for="ContactPhone" class="form-control" placeholder="+359888123456" />
+        <span asp-validation-for="ContactPhone" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="ContactEmail" class="form-label"></label>
+        <input asp-for="ContactEmail" type="text" class="form-control" placeholder="broker@estateflow.com" />
+        <span asp-validation-for="ContactEmail" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="4" placeholder="Детайлно описание..."></textarea>
+        <span asp-validation-for="Description" class="text-danger small"></span>
+    </div>
+</div>

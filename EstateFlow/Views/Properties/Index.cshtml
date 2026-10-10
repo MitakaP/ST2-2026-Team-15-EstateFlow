@@ -1,0 +1,65 @@
+﻿@model List<EstateFlow.Models.Property>
+
+@{
+    ViewData["Title"] = "Имоти";
+}
+
+<h1>Имоти в EstateFlow</h1>
+
+@if (TempData["Message"] is string message)
+{
+    <div class="alert alert-success">@message</div>
+}
+
+<form method="get" asp-action="Index" class="row g-3 mb-4">
+    <div class="col-md-5">
+        <label for="city" class="form-label">Град</label>
+        <input id="city" name="city" value="@ViewBag.City"
+               class="form-control" placeholder="Напр. Пловдив" />
+    </div>
+
+    <div class="col-md-5">
+        <label for="maxPrice" class="form-label">Максимална цена (€)</label>
+        <input id="maxPrice" name="maxPrice" type="number"
+               min="1" step="0.01" value="@ViewBag.MaxPrice"
+               class="form-control" placeholder="Напр. 150000" />
+    </div>
+
+    <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">
+            Филтрирай
+        </button>
+    </div>
+</form>
+
+<p>
+    <a asp-action="Create" class="btn btn-success">Добави имот</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">Изчисти филтрите</a>
+</p>
+
+@if (Model.Count == 0)
+{
+    <p>Няма намерени имоти. Опитай с други филтри или добави нов имот.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var property in Model)
+        {
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@property.Title</h5>
+                        <p class="card-text">@property.Description</p>
+                        <p><strong>Град:</strong> @property.City</p>
+                        <p><strong>Цена:</strong> @property.Price.ToString("N2") €</p>
+                        <p><strong>Площ:</strong> @property.Area m²</p>
+                        <p><strong>Стаи:</strong> @property.Rooms</p>
+                        <p><strong>Тип:</strong> @property.PropertyType</p>
+                        <p><strong>Оферта:</strong> @property.OfferType</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,24 @@
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build output
+**/bin/
+**/obj/
+[Dd]ebug/
+[Rr]elease/
+
+# SQLite database files
+**/App_Data/*.db
+**/App_Data/*.db-shm
+**/App_Data/*.db-wal
+
+# IDE files
+.idea/
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db

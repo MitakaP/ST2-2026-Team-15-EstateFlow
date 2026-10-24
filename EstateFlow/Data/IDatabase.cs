@@ -1,4 +1,4 @@
-﻿using EstateFlow.Models;
+using EstateFlow.Models;
 
 namespace EstateFlow.Data
 {
@@ -6,6 +6,7 @@ namespace EstateFlow.Data
     public interface IDatabase
     {
         IReadOnlyList<Property> GetAll();
+        IReadOnlyList<Property> Search(EstateFlow.Services.PropertySqlCommand command);
         Property? GetById(int id);
         int Add(Property property);
         bool Update(Property property);

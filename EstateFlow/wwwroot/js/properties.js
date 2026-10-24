@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const app = document.getElementById('properties-app');
@@ -194,9 +194,48 @@
         render();
     });
 
+    const aiForm = document.getElementById('properties-ai-form');
+    const aiQuery = document.getElementById('properties-ai-query');
+    const aiSubmit = document.getElementById('properties-ai-submit');
+    const aiReset = document.getElementById('properties-ai-reset');
+    const aiStatus = document.getElementById('properties-ai-status');
+    let originalProperties = [];
+
+    aiForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        aiSubmit.disabled = true;
+        aiStatus.className = 'small mt-2 text-muted';
+        aiStatus.textContent = 'Gemini обработва заявката...';
+        try {
+            const response = await fetch(app.dataset.aiUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body: new FormData(aiForm)
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Грешка при търсенето.');
+            state.all = data.properties;
+            els.filter.value = '';
+            applyFilter();
+            aiStatus.className = 'small mt-2 text-success';
+            aiStatus.textContent = (data.explanation || 'Готово.') + ` Намерени имоти: ${data.properties.length}.`;
+        } catch (err) {
+            aiStatus.className = 'small mt-2 text-danger';
+            aiStatus.textContent = err.message;
+        } finally { aiSubmit.disabled = false; }
+    });
+
+    aiReset.addEventListener('click', () => {
+        aiQuery.value = '';
+        aiStatus.textContent = '';
+        els.filter.value = '';
+        state.all = originalProperties.slice();
+        applyFilter();
+    });
+
     fetch(app.dataset.listUrl, { headers: { Accept: 'application/json' } })
         .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
-        .then(data => { state.all = data; applyFilter(); })
+        .then(data => { originalProperties = data; state.all = data; applyFilter(); })
         .catch(() => {
             els.body.replaceChildren();
             const tr = document.createElement('tr');

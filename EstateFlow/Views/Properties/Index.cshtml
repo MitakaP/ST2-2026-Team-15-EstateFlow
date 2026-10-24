@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Обяви";
 }
 
@@ -10,10 +10,22 @@
 <div class="card shadow-sm"
      id="properties-app"
      data-list-url="@Url.Action("List")"
+     data-ai-url="@Url.Action("AiSearch")"
      data-details-url="@Url.Action("Details", new { id = "__ID__" })"
      data-edit-url="@Url.Action("Edit", new { id = "__ID__" })"
      data-delete-url="@Url.Action("Delete", new { id = "__ID__" })">
     <div class="card-body">
+        <form id="properties-ai-form" class="rounded border p-3 bg-light mb-3">
+            @Html.AntiForgeryToken()
+            <label for="properties-ai-query" class="form-label fw-semibold">✨ Интелигентно търсене с Gemini</label>
+            <div class="input-group">
+                <input type="text" id="properties-ai-query" name="query" class="form-control" maxlength="500"
+                       placeholder="Например: апартаменти в Пловдив до 150000 евро, поне 3 стаи" required />
+                <button type="submit" id="properties-ai-submit" class="btn btn-primary">Намери имоти</button>
+                <button type="button" id="properties-ai-reset" class="btn btn-outline-secondary">Изчисти</button>
+            </div>
+            <div id="properties-ai-status" class="small mt-2" role="status" aria-live="polite"></div>
+        </form>
         <div class="row g-2 align-items-center mb-3">
             <div class="col-12 col-md">
                 <div class="input-group search-box">

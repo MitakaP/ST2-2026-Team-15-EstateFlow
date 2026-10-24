@@ -1,6 +1,7 @@
-﻿
+
 using EstateFlow.Data;
 using EstateFlow.Models;
+using EstateFlow.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 
@@ -11,8 +12,34 @@ public class PropertiesController : Controller
     private const int SqliteConstraint = 19;
 
     private readonly IDatabase _db;
+    private readonly IGeminiPropertyService _gemini;
 
-    public PropertiesController(IDatabase db) => _db = db;
+    public PropertiesController(IDatabase db, IGeminiPropertyService gemini)
+    {
+        _db = db;
+        _gemini = gemini;
+    }
+
+    /// <summary>AI translates natural-language criteria to an allow-listed, parameterized DB search.</summary>
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AiSearch([FromForm] string query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length > 500)
+            return BadRequest(new { error = "Въведете заявка до 500 символа." });
+        var result = await _gemini.GenerateAsync(query, cancellationToken);
+        if (!result.IsSuccess || result.Query is null)
+            return BadRequest(new { error = result.Error ?? "Невалидна заявка." });
+        try
+        {
+            var command = PropertyQuerySqlTranslator.Translate(result.Query);
+            return Json(new { properties = _db.Search(command), explanation = result.Query.Explanation });
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { error = "ИИ върна непозволени критерии за търсене." });
+        }
+    }
+
 
     public IActionResult Index() => View();
 

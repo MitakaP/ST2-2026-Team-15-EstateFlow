@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36908.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EstateFlow", "EstateFlow\EstateFlow.csproj", "{CFBB351E-CD54-4958-8EB2-D3F2C503D78A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EstateFlow.Tests", "EstateFlow.Tests\EstateFlow.Tests.csproj", "{308B0997-3BB2-6DD6-9E90-BE3D76735098}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{CFBB351E-CD54-4958-8EB2-D3F2C503D78A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CFBB351E-CD54-4958-8EB2-D3F2C503D78A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CFBB351E-CD54-4958-8EB2-D3F2C503D78A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{308B0997-3BB2-6DD6-9E90-BE3D76735098}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{308B0997-3BB2-6DD6-9E90-BE3D76735098}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{308B0997-3BB2-6DD6-9E90-BE3D76735098}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{308B0997-3BB2-6DD6-9E90-BE3D76735098}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

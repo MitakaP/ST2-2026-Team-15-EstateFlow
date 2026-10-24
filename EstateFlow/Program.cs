@@ -1,8 +1,15 @@
 using EstateFlow.Data;
+using EstateFlow.Configuration;
+using EstateFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection(GeminiOptions.SectionName));
+builder.Services.AddHttpClient<IGeminiPropertyService, GeminiPropertyService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
 
 // Относителният път в connection string-а се разрешава спрямо папката на проекта.
 var connectionString = builder.Configuration.GetConnectionString("EstateFlowDb")

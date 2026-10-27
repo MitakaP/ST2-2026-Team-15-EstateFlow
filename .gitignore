@@ -22,3 +22,14 @@
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Additional local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Local secrets and environment files
+secrets.json
+.env
+.env.*
+!.env.example

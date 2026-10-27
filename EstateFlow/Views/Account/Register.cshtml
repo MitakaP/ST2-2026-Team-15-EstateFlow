@@ -1,0 +1,84 @@
+﻿@model EstateFlow.ViewModels.RegisterViewModel
+
+@{
+    ViewData["Title"] = "Регистрация";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-7 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <h2 class="h3 text-center mb-4">
+                    Създаване на профил
+                </h2>
+
+                <form asp-controller="Account"
+                      asp-action="Register"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email"
+                               class="form-label"></label>
+
+                        <input asp-for="Email"
+                               class="form-control"
+                               autocomplete="email" />
+
+                        <span asp-validation-for="Email"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password"
+                               class="form-label"></label>
+
+                        <input asp-for="Password"
+                               class="form-control"
+                               autocomplete="new-password" />
+
+                        <span asp-validation-for="Password"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ConfirmPassword"
+                               class="form-label"></label>
+
+                        <input asp-for="ConfirmPassword"
+                               class="form-control"
+                               autocomplete="new-password" />
+
+                        <span asp-validation-for="ConfirmPassword"
+                              class="text-danger"></span>
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary w-100 mt-2">
+                        Регистрация
+                    </button>
+                </form>
+
+                <hr class="my-4" />
+
+                <p class="text-center mb-0">
+                    Вече имате профил?
+                    <a asp-controller="Account"
+                       asp-action="Login">
+                        Влезте тук
+                    </a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

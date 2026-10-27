@@ -2,13 +2,22 @@
     ViewData["Title"] = "Обяви";
 }
 
+
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Обяви</h1>
-    <a asp-action="Create" class="btn btn-primary">+ Добави имот</a>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            + Добави имот
+        </a>
+    }
 </div>
+
 
 <div class="card shadow-sm"
      id="properties-app"
+     data-is-authenticated="@(User.Identity?.IsAuthenticated == true ? "true" : "false")"
      data-list-url="@Url.Action("List")"
      data-ai-url="@Url.Action("AiSearch")"
      data-details-url="@Url.Action("Details", new { id = "__ID__" })"

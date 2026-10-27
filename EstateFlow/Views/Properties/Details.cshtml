@@ -173,15 +173,27 @@
 
     <!-- БУТОНИ -->
     <div class="card-footer d-flex gap-2">
-        <a asp-action="Edit"
-           asp-route-id="@Model.Id"
-           class="btn btn-primary">
-            Редакция
-        </a>
+
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn btn-primary">
+                Редакция
+            </a>
+
+            <a asp-action="Delete"
+               asp-route-id="@Model.Id"
+               class="btn btn-outline-danger">
+                Изтриване
+            </a>
+        }
 
         <a asp-action="Index"
            class="btn btn-outline-secondary">
             Назад
         </a>
+
     </div>
+
 </div>

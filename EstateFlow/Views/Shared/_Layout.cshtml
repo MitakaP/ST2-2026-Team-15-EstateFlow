@@ -1,49 +1,159 @@
-﻿<!DOCTYPE html>
+﻿
+<!DOCTYPE html>
 <html lang="bg">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - Estate Flow</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
 </head>
+
 <body class="bg-light">
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-primary shadow-sm mb-4">
             <div class="container">
-                <a class="navbar-brand fw-semibold" asp-controller="Properties" asp-action="Index">&#127960; Estate Flow</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
-                        aria-controls="nav" aria-expanded="false" aria-label="Меню">
+
+                <!-- ЛОГО -->
+                <a class="navbar-brand fw-semibold"
+                   asp-controller="Properties"
+                   asp-action="Index">
+                    &#127960; Estate Flow
+                </a>
+
+                <!-- МОБИЛНО МЕНЮ -->
+                <button class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#nav"
+                        aria-controls="nav"
+                        aria-expanded="false"
+                        aria-label="Меню">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="nav">
+
+                    <!-- ЛЯВО МЕНЮ -->
                     <ul class="navbar-nav me-auto">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Properties" asp-action="Index">Обяви</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Properties" asp-action="Create">Добави имот</a></li>
+
+                        <li class="nav-item">
+                            <a class="nav-link"
+                               asp-controller="Properties"
+                               asp-action="Index">
+                                Обяви
+                            </a>
+                        </li>
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Properties"
+                                   asp-action="Create">
+                                    Добави имот
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    <!-- ДЯСНО МЕНЮ -->
+                    <ul class="navbar-nav ms-auto align-items-sm-center">
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <!-- ВПИСАН ПОТРЕБИТЕЛ -->
+                            <li class="nav-item">
+                                <span class="nav-link text-white">
+                                    Здравей, @User.Identity.Name!
+                                </span>
+                            </li>
+
+                            <li class="nav-item ms-sm-2">
+                                <form asp-controller="Account"
+                                      asp-action="Logout"
+                                      method="post"
+                                      class="m-0">
+
+                                    @Html.AntiForgeryToken()
+
+                                    <button type="submit"
+                                            class="btn btn-outline-light btn-sm">
+                                        Изход
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <!-- ГОСТ -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Account"
+                                   asp-action="Login">
+                                    Вход
+                                </a>
+                            </li>
+
+                            <li class="nav-item ms-sm-2">
+                                <a class="btn btn-light btn-sm"
+                                   asp-controller="Account"
+                                   asp-action="Register">
+                                    Регистрация
+                                </a>
+                            </li>
+                        }
+
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
+
+    <!-- ОСНОВНО СЪДЪРЖАНИЕ -->
     <div class="container">
         <main role="main" class="pb-4">
+
             @if (TempData["Message"] is string message)
             {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <div class="alert alert-success alert-dismissible fade show"
+                     role="alert">
+
                     @message
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Затвори">
+                    </button>
                 </div>
             }
+
             @RenderBody()
+
         </main>
     </div>
 
+    <!-- FOOTER -->
     <footer class="border-top text-muted small py-3 text-center">
-        Estate Flow &middot; ASP.NET Core MVC &middot; SQLite &middot; Bootstrap
+        Estate Flow &middot; ASP.NET Core MVC
+        &middot; SQLite &middot; Bootstrap
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script src="~/js/site.js"
+            asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

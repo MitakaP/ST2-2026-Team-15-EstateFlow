@@ -1,11 +1,10 @@
-[README.md](https://github.com/user-attachments/files/33904718/README.md)
 # EstateFlow 🏠
 
 **EstateFlow** е уеб приложение за управление и търсене на обяви за недвижими имоти, разработено като университетски проект по **„Софтуерни технологии 2“** към Факултета по математика и информатика на Пловдивския университет „Паисий Хилендарски“.
 
 **Екип:** Team 15  
 **Хранилище:** [ST2-2026-Team-15-EstateFlow](https://github.com/MitakaP/ST2-2026-Team-15-EstateFlow)  
-**Технологии:** C#, ASP.NET Core 8 MVC, Razor Views, SQLite, JavaScript, Bootstrap, Google Gemini REST API, xUnit.
+**Технологии:** C#, ASP.NET Core 8 MVC, Razor Views, SQLite, Entity Framework Core, ASP.NET Core Identity, JavaScript, Bootstrap, Google Gemini REST API, Google Maps, xUnit.
 
 ## Основни функционалности
 
@@ -13,8 +12,14 @@
 - Преглед на подробности за конкретен имот.
 - Добавяне, редактиране и изтриване на имоти (CRUD).
 - Валидация на въведените данни, включително проверка за уникален референтен номер.
-- **Интелигентно търсене:** потребителят описва критериите си на български или английски, а Google Gemini ги преобразува в структурирана заявка. Приложението я валидира и извлича реалните резултати от SQLite.
+- **Интелигентно търсене:** потребителят описва критериите си на български или английски, а Google Gemini ги преобразува в структурирана заявка. Приложението я валидира и извлича резултатите от SQLite.
 - Сортиране по позволени полета, включително заявки само за сортиране без филтриращи условия.
+- **Google Maps:** визуализиране на местоположението на имота според въведения адрес, както и връзка за отваряне в Google Maps.
+- **Регистрация и вход:** създаване на потребителски акаунти чрез ASP.NET Core Identity.
+- **Управление на сесии:** вход, изход и възможност „Запомни ме“.
+- **Контрол на достъпа:** добавяне, редактиране и изтриване на имоти само от вписани потребители.
+- Динамичен потребителски интерфейс, който показва действията според състоянието на удостоверяване.
+- Автоматизирани unit и integration тестове.
 
 ## Развитие по седмици
 
@@ -30,7 +35,7 @@
 ### Седмица 2 — Update и Delete
 
 - **Update** — редактиране на съществуващ имот чрез `PropertiesController.Edit`, `IDatabase.Update` и `Views/Properties/Edit.cshtml`.
-- **Delete** — изтриване с отделен екран за потвърждение чрез `PropertiesController.Delete`/`DeleteConfirmed`, `IDatabase.Delete` и `Views/Properties/Delete.cshtml`.
+- **Delete** — изтриване с отделен екран за потвърждение чрез `PropertiesController.Delete` / `DeleteConfirmed`, `IDatabase.Delete` и `Views/Properties/Delete.cshtml`.
 - **Валидация** — Data Annotations и проверка за уникалност на референтния номер; формите за запис и изтриване използват anti-forgery защита.
 
 ### Седмица 3 — Gemini AI и автоматизирани тестове
@@ -40,23 +45,97 @@
 - Поддръжка на числови и текстови филтри и устойчиво прочитане на JSON числови стойности чрез `FlexibleStringConverter`.
 - Проверка на разрешените колони и оператори и превод до **параметризирана SQL SELECT заявка** чрез `PropertyQuerySqlTranslator`.
 - Заявки само за сортиране (без `WHERE`, когато няма условия).
-- xUnit тестове за преводача, JSON конвертора и Gemini услугата с симулирани HTTP отговори.
+- xUnit тестове за преводача, JSON конвертора и Gemini услугата със симулирани HTTP отговори.
 
-> **Тестов статус:** При последното локално изпълнение във Visual Studio всички тестове са преминали успешно (потвърдено от разработчика). Автоматизираните тестове на Gemini услугата не изискват реални API повиквания.
+### Допълнителна функционалност — Google Maps
+
+Към страницата с детайлите на имота е добавена интеграция с Google Maps.
+
+Реализацията включва:
+
+- Помощен клас `PropertyLocation` в `Services`.
+- Съставяне на адрес от полетата `Street`, `Neighborhood` и `City`.
+- Генериране на URL за вграждане на карта.
+- Интерактивна карта в `Views/Properties/Details.cshtml`.
+- Връзка „Отвори в Google Maps“.
+- Обработка на случаи с липсващи адресни данни.
+
+Поддържат се два варианта:
+
+1. **Google Maps Embed API** — чрез отделен API ключ, конфигуриран като `GoogleMaps:EmbedApiKey`.
+2. **Google Maps без API ключ** — чрез `maps.google.com/maps?q=...&output=embed`.
+
+Вторият вариант е използван за локалната демонстрация на проекта. Той не изисква въвеждане на платежни данни, но използва **недокументиран механизъм за вграждане**, чиято дългосрочна поддръжка не е гарантирана от Google.
+
+Местоположението се определя по текстов адрес и може да бъде приблизително. Приложението не съхранява GPS координати за имотите.
+
+### Допълнителна функционалност — Login/Register с ASP.NET Core Identity
+
+Реализирана е система за управление на потребителски акаунти чрез **ASP.NET Core Identity**, Entity Framework Core и SQLite.
+
+Основните възможности са:
+
+- **Register** — регистрация с имейл, парола и потвърждение на паролата.
+- **Login** — удостоверяване на съществуващ потребител.
+- **Logout** — прекратяване на потребителската сесия.
+- **Remember Me** — възможност за запазване на удостоверяването между браузърни сесии.
+- **Password Hashing** — защитено съхранение на паролите чрез механизмите на Identity.
+- **Cookie Authentication** — управление на удостоверената потребителска сесия.
+- **Authorization** — ограничаване на действията чрез `[Authorize]`.
+- **Anti-forgery защита** — проверка на POST заявките от потребителските форми.
+
+Потребителите се управляват чрез `AccountController`, `UserManager<IdentityUser>` и `SignInManager<IdentityUser>`.
+
+За потребителските акаунти се използва `ApplicationDbContext`, наследяващ `IdentityDbContext`.
+
+Схемата на Identity се създава чрез Entity Framework Core миграцията `InitialIdentity`.
+
+### Контрол на достъпа
+
+| Функционалност | Гост | Вписан потребител |
+|---|---|---|
+| Разглеждане на обявите | Да | Да |
+| Подробности за имот | Да | Да |
+| Google Maps | Да | Да |
+| Обикновено филтриране | Да | Да |
+| Gemini AI търсене | Да | Да |
+| Регистрация и вход | Да | Да |
+| Добавяне на имот | Не | Да |
+| Редактиране на имот | Не | Да |
+| Изтриване на имот | Не | Да |
+| Изход от профила | Не | Да |
+
+Сървърната защита се реализира чрез атрибута `[Authorize]` в `PropertiesController`.
+
+Допълнително:
+
+- `_Layout.cshtml` показва различни навигационни елементи за гост и вписан потребител.
+- `Index.cshtml` предава състоянието на удостоверяване на JavaScript чрез `data-is-authenticated`.
+- `properties.js` показва бутоните „Редакция“ и „Изтрий“ само за вписани потребители.
+- `Details.cshtml` скрива действията за редактиране и изтриване от гостите.
+
+Скриването на бутоните е визуално удобство. **Реалният контрол на достъпа се осъществява на сървъра.**
+
+На този етап всеки вписан потребител може да редактира и изтрива всички имоти. Не са реализирани отделни роли „Администратор“, „Брокер“ или собственост на обявите.
 
 ## MVC архитектура
 
-Приложението следва **Model–View–Controller (MVC)**:
+Приложението следва архитектурния модел **Model–View–Controller (MVC)**.
 
 | Слой | Основни компоненти | Отговорност |
-| --- | --- | --- |
-| Models | `Property`, `PropertyQuery`, `PropertyQueryCondition` | Данни за имота и ограничен формат за ИИ заявки |
-| Views | `Views/Properties/*.cshtml` | Потребителски интерфейс, форми и резултати |
-| Controllers | `PropertiesController`, `HomeController` | HTTP действия, проверка на входа и координация на услугите |
-| Data | `IDatabase`, `Database` | SQLite достъп и CRUD операции |
-| Services | `GeminiPropertyService`, `PropertyQuerySqlTranslator` | ИИ комуникация и безопасен превод на заявки |
+|---|---|---|
+| Models | `Property`, `PropertyQuery`, `PropertyQueryCondition` | Данни за имоти и структуриран формат за AI заявки |
+| ViewModels | `RegisterViewModel`, `LoginViewModel` | Данни и валидация на формите за удостоверяване |
+| Views | `Views/Properties/*.cshtml`, `Views/Account/*.cshtml` | Потребителски интерфейс, форми и визуализация |
+| Controllers | `PropertiesController`, `AccountController`, `HomeController` | HTTP действия, удостоверяване и координация на услугите |
+| Data | `IDatabase`, `Database`, `ApplicationDbContext` | SQLite достъп, CRUD и Identity |
+| Services | `GeminiPropertyService`, `PropertyQuerySqlTranslator`, `PropertyLocation` | AI комуникация, превод на заявки и Google Maps URL адреси |
 
-**Основни Razor изгледи:** `Index`, `Details`, `Create`, `Edit` и `Delete` — пет отделни изгледа за управление на имоти. Използва се и частичен изглед `_PropertyForm.cshtml` за формите.
+**Основни Razor изгледи за имоти:** `Index`, `Details`, `Create`, `Edit`, `Delete`.
+
+**Razor изгледи за потребители:** `Login`, `Register`.
+
+Използва се и частичен изглед `_PropertyForm.cshtml` за формите за имоти.
 
 ### Поток на интелигентното търсене
 
@@ -84,17 +163,46 @@ IDatabase.Search -> SQLite -> резултати в интерфейса
 
 ИИ **не изпълнява SQL** и няма директен достъп до базата данни. Gemini получава инструкции за позволените полета, но не получава редовете с имоти или личните контакти на брокерите. SQL се изгражда и изпълнява от приложението с параметри.
 
+### Поток на потребителското удостоверяване
+
+```text
+Потребител -> Register / Login форма
+    |
+    v
+AccountController
+    |
+    v
+RegisterViewModel / LoginViewModel
+    |
+    v
+UserManager / SignInManager
+    |
+    v
+ApplicationDbContext (Identity)
+    |
+    v
+SQLite (AspNetUsers и свързаните таблици)
+    |
+    v
+Authentication Cookie
+    |
+    v
+Достъп до защитените MVC действия чрез [Authorize]
+```
+
 ## Design Patterns
 
 | Шаблон | Реализация | Приложение |
-| --- | --- | --- |
-| **Singleton** | `Database.Initialize(...)`, регистрация на `IDatabase` чрез `AddSingleton` | Един споделен обект за работа с базата в рамките на приложението |
-| **Adapter / Facade** | `IGeminiPropertyService`, `GeminiPropertyService` | Скриване на HTTP комуникацията, структурата на Gemini API и обработката на отговора зад услуга |
-| **Interpreter / Translator** | `PropertyQuery`, `PropertyQuerySqlTranslator`, `PropertySqlCommand` | Интерпретиране на ограничена заявка и превръщането ѝ в параметризиран SQL |
-| **Result Object** | `PropertyAiResult` | Представяне на успешен ИИ резултат или очаквана грешка без използване на изключения за обичайния поток |
+|---|---|---|
+| **Singleton** | `Database.Initialize(...)`, регистрация на `IDatabase` чрез `AddSingleton` | Един споделен обект за работа с базата |
+| **Adapter / Facade** | `IGeminiPropertyService`, `GeminiPropertyService` | Скриване на HTTP комуникацията с Gemini зад услуга |
+| **Interpreter / Translator** | `PropertyQuery`, `PropertyQuerySqlTranslator`, `PropertySqlCommand` | Интерпретиране на ограничена заявка и преобразуването ѝ в параметризиран SQL |
+| **Result Object** | `PropertyAiResult` | Представяне на успешен AI резултат или очаквана грешка |
 | **Options Pattern** | `GeminiOptions`, `IOptions<GeminiOptions>` | Типизирана конфигурация на Gemini API |
 
-Интерфейсът `IDatabase` допълнително отделя контролерите от конкретната SQLite реализация и осигурява **repository-подобна абстракция**. Шаблоните са коментирани и в съответните C# класове.
+Интерфейсът `IDatabase` допълнително отделя контролерите от конкретната SQLite реализация и осигурява **repository-подобна абстракция**.
+
+Използването на ASP.NET Core Identity допълва съществуващата архитектура, без да заменя реализираните Design Patterns.
 
 ## Структура на проекта
 
@@ -102,64 +210,177 @@ IDatabase.Search -> SQLite -> резултати в интерфейса
 EstateFlow.sln
 EstateFlow/
 ├── Configuration/          # GeminiOptions
-├── Controllers/            # PropertiesController, HomeController
-├── Data/                   # IDatabase, Database
+├── Controllers/            # PropertiesController, AccountController, HomeController
+├── Data/                   # IDatabase, Database, ApplicationDbContext
 ├── Enums/                  # PropertyType
+├── Migrations/             # EF Core Identity миграции
 ├── Models/                 # Property, PropertyQuery и др.
-├── Services/               # Gemini API, JSON converter, SQL translator
+├── Services/               # Gemini, SQL translator, PropertyLocation
 ├── Validations/            # Валидация за уникалност
-├── Views/Properties/       # Index, Details, Create, Edit, Delete
+├── ViewModels/             # LoginViewModel, RegisterViewModel
+├── Views/
+│   ├── Account/            # Login, Register
+│   ├── Properties/         # Index, Details, Create, Edit, Delete
+│   └── Shared/             # _Layout и общи изгледи
 ├── wwwroot/                # JavaScript, CSS, статични ресурси
+├── App_Data/               # Локална SQLite база (не се публикува)
 ├── appsettings.json        # Несекретни настройки
 └── EstateFlow.csproj
-EstateFlow.Tests/              # xUnit тестове
+
+EstateFlow.Tests/
+├── AuthenticationIntegrationTests.cs
+├── EstateFlowWebApplicationFactory.cs
+├── FlexibleStringConverterTests.cs
+├── GeminiPropertyServiceTests.cs
+├── PropertyQuerySqlTranslatorTests.cs
+└── EstateFlow.Tests.csproj
 ```
 
 ## Изисквания
 
-- **.NET 8 SDK** (или съвместима среда с .NET 8).
-- Visual Studio с ASP.NET and web development workload **или** друг редактор, поддържащ .NET.
-- Интернет връзка и личен Gemini API ключ **само** за интелигентното търсене. Основните CRUD функции работят локално.
+- **.NET 8 SDK**.
+- Visual Studio с workload **ASP.NET and web development** или друг редактор с .NET поддръжка.
+- SQLite — използва се чрез NuGet пакетите на проекта.
+- Интернет връзка и собствен Gemini API ключ за интелигентното търсене.
+- Достъп до Google Maps за показване на картите.
+
+Основните CRUD функции, регистрацията и входът работят локално. Gemini AI търсенето изисква достъп до външната услуга.
 
 ## Стартиране на проекта
 
-1. Клонирайте хранилището:
+### 1. Клониране на хранилището
 
-   ```bash
-   git clone https://github.com/MitakaP/ST2-2026-Team-15-EstateFlow.git
-   cd ST2-2026-Team-15-EstateFlow
-   ```
+```bash
+git clone https://github.com/MitakaP/ST2-2026-Team-15-EstateFlow.git
+cd ST2-2026-Team-15-EstateFlow
+```
 
-2. Възстановете зависимостите и компилирайте:
+### 2. Възстановяване на зависимостите
 
-   ```bash
-   dotnet restore
-   dotnet build
-   ```
+```bash
+dotnet restore
+dotnet build
+```
 
-3. При първо стартиране приложението подготвя локалната SQLite база според конфигурацията `ConnectionStrings:EstateFlowDb` (по подразбиране `App_Data/estateflow.db`).
+### 3. Инициализиране на SQLite базата
 
-4. Стартирайте:
+При първо стартиране приложението създава таблицата за имотите според конфигурацията `ConnectionStrings:EstateFlowDb`.
 
-   ```bash
-   dotnet run --project EstateFlow/EstateFlow.csproj
-   ```
+По подразбиране базата се намира в:
 
-   Или отворете `EstateFlow.sln` във Visual Studio и стартирайте проекта `EstateFlow`.
+`EstateFlow/App_Data/estateflow.db`
 
-### Настройване на Gemini API ключ
+Ако файлът не съществува, `Database.Initialize()` създава необходимата таблица и добавя примерни имоти.
 
-Създайте собствен ключ в [Google AI Studio](https://aistudio.google.com/apikey). В директорията с `EstateFlow.csproj` задайте ключа чрез .NET User Secrets:
+Базата не се публикува в GitHub, тъй като е изключена чрез `.gitignore`.
+
+### 4. Прилагане на Identity миграцията
+
+**Важно:** След клониране на проекта на нов компютър трябва да бъдат създадени таблиците на ASP.NET Core Identity.
+
+Във Visual Studio отворете:
+
+**Tools → NuGet Package Manager → Package Manager Console**
+
+Изберете `EstateFlow` в полето **Default project** и изпълнете:
+
+```powershell
+Update-Database -Context ApplicationDbContext
+```
+
+Това прилага миграцията `InitialIdentity`, която създава необходимите таблици:
+
+- `AspNetUsers`
+- `AspNetRoles`
+- `AspNetUserRoles`
+- `AspNetUserClaims`
+- `AspNetUserLogins`
+- `AspNetUserTokens`
+- `AspNetRoleClaims`
+- `__EFMigrationsHistory`
+
+Identity използва същия SQLite файл като имотите, но достъпът до потребителските таблици се управлява чрез Entity Framework Core.
+
+Командата трябва да бъде изпълнена преди първата регистрация или вход.
+
+### 5. Стартиране
+
+```bash
+dotnet run --project EstateFlow/EstateFlow.csproj
+```
+
+Или отворете `EstateFlow.sln` във Visual Studio и стартирайте проекта `EstateFlow`.
+
+### 6. Регистрация и вход
+
+След стартиране отворете приложението в браузъра.
+
+От навигационното меню изберете **Регистрация** и създайте потребителски профил.
+
+Изисквания към паролата:
+
+- Минимум 8 символа.
+- Поне една главна буква.
+- Поне една малка буква.
+- Поне една цифра.
+
+След успешна регистрация потребителят автоматично влиза в профила си и се пренасочва към списъка с имоти.
+
+Съществуващите потребители могат да използват страницата **Вход**.
+
+При успешен вход се показват действията за добавяне, редактиране и изтриване на имоти.
+
+## Настройване на Gemini API ключ
+
+Създайте собствен ключ в [Google AI Studio](https://aistudio.google.com/apikey).
+
+От основната директория на хранилището задайте ключа чрез .NET User Secrets:
 
 ```bash
 dotnet user-secrets set "Gemini:ApiKey" "YOUR_GEMINI_API_KEY" --project EstateFlow/EstateFlow.csproj
 ```
 
-Във Visual Studio може да използвате **десен бутон върху проекта → Manage User Secrets**. Настройката на модела се намира в `EstateFlow/appsettings.json`, секция `Gemini:Model`; изберете идентификатор, достъпен за вашия API проект.
+Във Visual Studio може да използвате:
 
-**Не записвайте и не публикувайте истинския API ключ** в `appsettings.json`, изходния код, логове или GitHub. `secrets.json` от User Secrets се намира извън папката на хранилището. При работа на друг компютър ключът се конфигурира наново.
+**Десен бутон върху проекта EstateFlow → Manage User Secrets**
 
-## Примерни заявки към ИИ търсачката
+Конфигурацията на Gemini модела се намира в `EstateFlow/appsettings.json`, секция `Gemini:Model`.
+
+**Не записвайте истинския API ключ** в `appsettings.json`, изходния код, логове или GitHub.
+
+`secrets.json` от User Secrets се намира извън директорията на хранилището. При работа на друг компютър ключът трябва да се конфигурира локално.
+
+## Google Maps конфигурация
+
+EstateFlow използва класа `PropertyLocation`, който генерира адреси за Google Maps въз основа на въведените данни за имота.
+
+### Вариант без API ключ
+
+По подразбиране приложението може да използва следния недокументиран URL формат:
+
+```text
+https://maps.google.com/maps?q=ADDRESS&output=embed
+```
+
+Този подход позволява визуализиране на карта без отделен Google Maps API ключ и без въвеждане на банкова карта.
+
+Не представлява официална Maps Embed API интеграция и Google може да промени или прекрати поддръжката му.
+
+### Вариант с официален Google Maps Embed API
+
+При наличие на подходящ Google Maps API ключ може да се зададе следната настройка чрез User Secrets:
+
+```bash
+dotnet user-secrets set "GoogleMaps:EmbedApiKey" "YOUR_MAPS_API_KEY" --project EstateFlow/EstateFlow.csproj
+```
+
+Официалният Maps Embed API изисква подходяща Google Cloud конфигурация, активиран Billing и ограничения на ключа за разрешените уеб адреси и API услуги.
+
+**Важно:** Ключът за Maps Embed API се използва в браузъра. Той трябва да е отделен от сървърния Gemini ключ и да бъде ограничен чрез HTTP referrer и API ограничения.
+
+За локалната демонстрация на EstateFlow е използван вариантът без API ключ.
+
+## Примерни заявки към AI търсачката
 
 - `Покажи всички имоти в Пловдив`
 - `Намери апартаменти до 150000 евро`
@@ -167,9 +388,13 @@ dotnet user-secrets set "Gemini:ApiKey" "YOUR_GEMINI_API_KEY" --project EstateFl
 - `Намери имоти с поне 3 стаи`
 - `Подреди всички имоти от най-евтин към най-скъп`
 
-**Уточнения:** `Rooms` означава **общ брой стаи**, не брой спални. `Price` е в EUR, `Area` — в кв. м. ИИ търсенето поддържа най-много 12 филтриращи условия и до 100 резултата на заявка. Върнатите резултати зависят от наличните записи в базата.
+**Уточнения:** `Rooms` означава **общ брой стаи**, не брой спални. `Price` е в EUR, `Area` — в кв. м.
 
-## Тестове
+ИИ търсенето поддържа най-много 12 филтриращи условия и до 100 резултата на заявка. Върнатите резултати зависят от наличните записи в базата.
+
+## Автоматизирани тестове
+
+Проектът използва **xUnit** за проверка на основната функционалност.
 
 От директорията на решението:
 
@@ -177,29 +402,78 @@ dotnet user-secrets set "Gemini:ApiKey" "YOUR_GEMINI_API_KEY" --project EstateFl
 dotnet test EstateFlow.sln
 ```
 
-Или във Visual Studio: **Test → Test Explorer → Run All Tests**.
+Или във Visual Studio:
+
+**Test → Test Explorer → Run All Tests**
+
+### Unit тестове
 
 Покритите сценарии включват:
 
 - Текстови и числови условия и сортиране, включително без `WHERE`.
-- Параметризация и отхвърляне на неразрешени колони/оператори.
-- Екраниране на `LIKE` специалните символи.
+- Параметризация и отхвърляне на неразрешени колони и оператори.
+- Екраниране на специалните символи в `LIKE`.
 - Преобразуване на JSON числа към низове чрез `FlexibleStringConverter`.
 - Успешни и неуспешни Gemini HTTP отговори чрез тестови `HttpMessageHandler` обекти.
 
-Преди предаване е препоръчителна и ръчна проверка на Create, Details, Edit, Delete, стандартното филтриране и Gemini търсенето с реален ключ.
+Тестовете на Gemini услугата не изискват реални API повиквания.
+
+### Интеграционни тестове за Identity
+
+В `AuthenticationIntegrationTests.cs` са реализирани тестове за:
+
+| Тестов сценарий | Очакван резултат |
+|---|---|
+| Гост отваря Create | Пренасочване към Login |
+| Гост отваря Edit | Пренасочване към Login |
+| Гост отваря Delete | Пренасочване към Login |
+| Гост отваря Login | Успешно зареждане |
+| Гост отваря Register | Успешно зареждане |
+| Регистрация с валидни данни | Създаване на потребител в Identity |
+| Вход с валидни данни | Успешно удостоверяване и authentication cookie |
+| Logout | Прекратяване на сесията и ограничаване на достъпа |
+
+Интеграционните тестове използват `WebApplicationFactory<Program>` и класа `EstateFlowWebApplicationFactory`.
+
+### Изолирана тестова среда
+
+За да се избегне промяна на реалните имоти и потребителски акаунти:
+
+- Тестовете стартират приложението със среда `Testing`.
+- Identity използва временен SQLite файл.
+- Реалният `IDatabase` се заменя с тестов заместител, който блокира операциите с имотите.
+- Преди прилагане на миграциите се проверява пътят до тестовата база.
+- При приключване се извършва почистване на временните SQLite файлове, когато те могат да бъдат освободени.
+
+Така интеграционните тестове за удостоверяването се изпълняват независимо от реалната база `estateflow.db`.
+
+**Тестов статус:** При последната локална проверка във Visual Studio всички автоматизирани тестове са преминали успешно, според потвърждението на разработчика.
+
+Преди предаване се препоръчва и ръчна проверка на Create, Details, Edit, Delete, стандартното филтриране, Gemini търсенето, Google Maps и регистрацията и входа.
 
 ## Сигурност и ограничения
 
-- SQL заявки се създават **само** от валидирания C# преводач и използват параметри.
+- SQL заявките за AI търсене се създават само от валидирания C# преводач и използват параметри.
 - Имената на колони и SQL операторите се избират от изрично разрешени стойности.
-- Формите за промяна на данни и заявката за ИИ търсене използват anti-forgery защита.
-- API ключът се съхранява локално чрез User Secrets или подходящи секретни настройки на средата.
-- Публичният проект е **учебно приложение**. Няма реализирана система за потребителски роли и това не трябва да се приема за готово production решение.
-- Достъпността, квотите и цената на Gemini моделите се определят от Google и може да се променят.
+- Формите за промяна на данни, Login/Register и AI търсенето използват anti-forgery защита.
+- Паролите се съхраняват от ASP.NET Core Identity като защитени хешове.
+- Защитата на CRUD операциите е реализирана чрез `[Authorize]`.
+- Удостоверяването използва защитени ASP.NET Core authentication cookies.
+- API ключовете се конфигурират локално чрез User Secrets или подходящи секретни настройки на средата.
+- Локалните SQLite бази, временните build файлове и `secrets.json` са изключени от публикуване чрез `.gitignore`.
+- Всеки регистриран потребител може да управлява всички имоти — няма реализирани потребителски роли или собственост на обявите.
+- Няма реализирана функционалност за потвърждаване на имейл или възстановяване на забравена парола.
+- Вграждането на Google Maps без API ключ използва недокументиран механизъм.
+- Достъпността, квотите и цената на Gemini моделите се определят от Google и могат да се променят.
+
+Публичният проект е **учебно приложение** и не трябва да се приема за напълно готово production решение.
 
 ## Авторство и учебен контекст
 
 Разработено за дисциплината **„Софтуерни технологии 2“**, **Team 15**, учебна 2026 година.
 
 Частта за Gemini е разработена с оглед на лабораторното ръководство *„Интеграция на Google Gemini ИИ в приложението ContactsMVC“* (ФМИ, ПУ „Паисий Хилендарски“, 2026), като подходът `естествен език → JSONQuery → безопасен SQL SELECT` е адаптиран към предметната област на EstateFlow.
+
+Интеграцията на Google Maps е адаптирана към модела `Property` и структурата на приложението.
+
+Функционалността за управление на потребители е реализирана чрез ASP.NET Core Identity, Entity Framework Core и SQLite, с интеграционни тестове за удостоверяване и защита на ресурсите.

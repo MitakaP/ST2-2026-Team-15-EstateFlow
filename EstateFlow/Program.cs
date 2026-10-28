@@ -90,7 +90,21 @@ if (!app.Environment.IsEnvironment("Testing"))
     app.Services.GetRequiredService<IDatabase>();
 }
 
-app.Run();
+// Apply pending ASP.NET Core Identity migrations automatically
+// when running the application locally.
+//
+// Integration tests use their own isolated database and are excluded.
+// Production migrations should be applied during deployment.
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+
+    var identityDb = scope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
+
+    await identityDb.Database.MigrateAsync();
+}
 
 app.Run();
 

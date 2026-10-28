@@ -1,4 +1,13 @@
-﻿
+@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
+@inject EstateFlow.Data.ApplicationDbContext ProfileDb
+@{
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var navbarProfile = currentUserId is null ? null : await ProfileDb.UserProfiles
+        .AsNoTracking().FirstOrDefaultAsync(p => p.UserId == currentUserId);
+    var navbarName = navbarProfile?.Nickname ?? User.Identity?.Name?.Split('@')[0] ?? "Профил";
+}
+
 <!DOCTYPE html>
 <html lang="bg">
 <head>
@@ -71,9 +80,11 @@
                         {
                             <!-- ВПИСАН ПОТРЕБИТЕЛ -->
                             <li class="nav-item">
-                                <span class="nav-link text-white">
-                                    Здравей, @User.Identity.Name!
-                                </span>
+                                <a class="nav-link text-white d-flex align-items-center gap-2" asp-controller="Account" asp-action="Profile">
+                                    @if (!string.IsNullOrWhiteSpace(navbarProfile?.ProfileImagePath))
+                                    { <img src="@navbarProfile.ProfileImagePath" alt="" class="rounded-circle" style="width:28px;height:28px;object-fit:cover;object-position:center;flex-shrink:0" /> }
+                                    <span>Здравей, @navbarName!</span>
+                                </a>
                             </li>
 
                             <li class="nav-item ms-sm-2">

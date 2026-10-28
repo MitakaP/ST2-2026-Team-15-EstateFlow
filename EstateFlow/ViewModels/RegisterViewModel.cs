@@ -1,4 +1,4 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 
 namespace EstateFlow.ViewModels;
@@ -8,6 +8,12 @@ namespace EstateFlow.ViewModels;
 /// </summary>
 public class RegisterViewModel
 {
+    [Required(ErrorMessage = "Nickname е задължителен.")]
+    [StringLength(30, MinimumLength = 3, ErrorMessage = "Nickname трябва да бъде от 3 до 30 символа.")]
+    [RegularExpression(@"^[a-zA-Z0-9_]+$", ErrorMessage = "Използвайте латински букви, цифри и долна черта.")]
+    [Display(Name = "Nickname")]
+    public string Nickname { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Имейлът е задължителен.")]
     [EmailAddress(ErrorMessage = "Въведете валиден имейл адрес.")]
     [Display(Name = "Имейл")]

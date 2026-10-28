@@ -1,4 +1,4 @@
-﻿
+
 using System.Net;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -104,6 +104,7 @@ public class AuthenticationIntegrationTests
         var form = new Dictionary<string, string>
         {
             ["Email"] = email,
+            ["Nickname"] = "user" + Guid.NewGuid().ToString("N")[..12],
             ["Password"] = "TestPassword123",
             ["ConfirmPassword"] = "TestPassword123",
             ["__RequestVerificationToken"] = token

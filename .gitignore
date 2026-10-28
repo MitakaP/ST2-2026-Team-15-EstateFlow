@@ -33,3 +33,7 @@ secrets.json
 .env
 .env.*
 !.env.example
+
+# Uploaded profile images (user-generated)
+**/wwwroot/uploads/profiles/*
+!**/wwwroot/uploads/profiles/.gitkeep

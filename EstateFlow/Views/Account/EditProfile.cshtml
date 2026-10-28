@@ -1,0 +1,53 @@
+@model EstateFlow.ViewModels.ProfileEditViewModel
+@{ ViewData["Title"] = "Редактиране на профила"; }
+<div class="card shadow-sm mx-auto" style="max-width:760px"><div class="card-body p-4">
+<h1 class="h3 mb-4">Редактиране на профила</h1>
+<form asp-action="EditProfile" method="post" enctype="multipart/form-data">
+ @Html.AntiForgeryToken()
+ <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+ <div class="mb-3"><label asp-for="Nickname" class="form-label"></label><input asp-for="Nickname" class="form-control"/><span asp-validation-for="Nickname" class="text-danger"></span></div>
+ <div class="row">
+  <div class="col-md-4 mb-3"><label asp-for="FirstName" class="form-label"></label><input asp-for="FirstName" class="form-control"/><span asp-validation-for="FirstName" class="text-danger"></span></div>
+  <div class="col-md-4 mb-3"><label asp-for="MiddleName" class="form-label"></label><input asp-for="MiddleName" class="form-control"/><span asp-validation-for="MiddleName" class="text-danger"></span></div>
+  <div class="col-md-4 mb-3"><label asp-for="LastName" class="form-label"></label><input asp-for="LastName" class="form-control"/><span asp-validation-for="LastName" class="text-danger"></span></div>
+ </div>
+ <div class="mb-3"><label asp-for="PhoneNumber" class="form-label"></label><input asp-for="PhoneNumber" class="form-control" type="tel"/><span asp-validation-for="PhoneNumber" class="text-danger"></span></div>
+ <div class="mb-3"><label asp-for="Bio" class="form-label"></label><textarea asp-for="Bio" class="form-control" rows="4" maxlength="500"></textarea><span asp-validation-for="Bio" class="text-danger"></span></div>
+ @if (!string.IsNullOrWhiteSpace(Model.ExistingImagePath)) {
+  <div class="mb-2"><img src="@Model.ExistingImagePath" alt="Текуща снимка" style="width:90px;height:90px;object-fit:cover;object-position:center" class="rounded-circle" /></div>
+ }
+ <div class="mb-3">
+   <label asp-for="Photo" class="form-label"></label>
+   <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" id="profilePhoto" />
+   <span asp-validation-for="Photo" class="text-danger"></span>
+   <div id="photoSizeError" class="text-danger mt-2" role="alert" hidden></div>
+   <div id="photoPreviewBox" class="mt-2" hidden>
+     <img id="photoPreview" alt="Предварителен преглед" class="rounded-circle" style="width:100px;height:100px;object-fit:cover;display:block" />
+     <button id="editCropButton" type="button" class="btn btn-outline-secondary btn-sm mt-2">Намести снимката</button>
+   </div>
+   <div class="form-text">JPG, PNG или WebP до 5 MB. След избора можеш да преместиш и увеличиш снимката.</div>
+ </div>
+ <button class="btn btn-primary" type="submit">Запази промените</button> <a asp-action="Profile" class="btn btn-outline-secondary">Отказ</a>
+</form></div></div>
+
+<div class="modal fade" id="avatarCropModal" tabindex="-1" aria-labelledby="avatarCropTitle" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+   <div class="modal-header"><h2 class="modal-title fs-5" id="avatarCropTitle">Наместване на профилна снимка</h2>
+     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затвори"></button>
+   </div>
+   <div class="modal-body text-center">
+     <p class="text-muted small">Премести снимката с мишката или пръст, за да избереш видимата част.</p>
+     <canvas id="avatarCropCanvas" width="300" height="300" role="img" aria-label="Предварителен преглед на изрязването" style="width:min(300px,100%);height:auto;border-radius:50%;touch-action:none;cursor:grab;background:#eee;max-width:100%"></canvas>
+     <label class="form-label d-block mt-3" for="avatarZoom">Увеличение</label>
+     <input id="avatarZoom" class="form-range" type="range" min="1" max="3" step="0.01" value="1" />
+   </div>
+   <div class="modal-footer">
+     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отказ</button>
+     <button type="button" class="btn btn-primary" id="applyAvatarCrop">Използвай тази снимка</button>
+   </div>
+ </div></div>
+</div>
+@section Scripts {
+ <partial name="_ValidationScriptsPartial" />
+ <script src="~/js/avatar-crop.js" asp-append-version="true"></script>
+}

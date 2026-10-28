@@ -1,0 +1,18 @@
+@model EstateFlow.ViewModels.ProfileDisplayViewModel
+@{ ViewData["Title"] = "Моят профил"; }
+<div class="card shadow-sm mx-auto" style="max-width:760px">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))
+      { <img src="@Model.ProfileImagePath" alt="Профилна снимка" class="rounded-circle" style="width:90px;height:90px;object-fit:cover;object-position:center;flex-shrink:0;display:block" /> }
+      else { <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:90px;height:90px;font-size:32px;flex-shrink:0">@Model.Nickname.Substring(0, 1).ToUpperInvariant()</div> }
+      <div><h1 class="h3 mb-1">@Model.Nickname</h1><span class="text-muted">@Model.FullName</span></div>
+    </div>
+    <dl class="row">
+      <dt class="col-sm-3">Имейл</dt><dd class="col-sm-9">@Model.Email</dd>
+      <dt class="col-sm-3">Телефон</dt><dd class="col-sm-9">@(Model.PhoneNumber ?? "—")</dd>
+      <dt class="col-sm-3">За мен</dt><dd class="col-sm-9" style="white-space:pre-wrap">@(Model.Bio ?? "—")</dd>
+    </dl>
+    <a asp-action="EditProfile" class="btn btn-primary">Редактиране на профила</a>
+  </div>
+</div>

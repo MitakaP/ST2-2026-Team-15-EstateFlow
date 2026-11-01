@@ -1,4 +1,3 @@
-
 using EstateFlow.Data;
 using EstateFlow.Models;
 using EstateFlow.Services;
@@ -62,7 +61,9 @@ public class PropertiesController : Controller
             return Json(new
             {
                 properties = _db.Search(command),
-                explanation = result.Query.Explanation
+                explanation = result.Query.Explanation,
+                provider = result.Provider,
+                usedFallback = result.UsedFallback
             });
         }
         catch (ArgumentException)

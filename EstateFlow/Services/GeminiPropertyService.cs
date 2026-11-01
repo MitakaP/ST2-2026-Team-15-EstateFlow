@@ -17,7 +17,7 @@ public sealed class GeminiPropertyService : IGeminiPropertyService
     private readonly GeminiOptions _options;
     private readonly ILogger<GeminiPropertyService> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters =
@@ -26,7 +26,7 @@ public sealed class GeminiPropertyService : IGeminiPropertyService
         }
     };
 
-    private const string Instruction = """
+    internal const string Instruction = """
         Convert Bulgarian or English real-estate requests into a JSON query for the SQLite Properties table.
 
         Output a JSON object only.

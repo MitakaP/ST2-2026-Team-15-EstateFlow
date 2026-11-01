@@ -1,9 +1,9 @@
-
 using EstateFlow.Data;
 using EstateFlow.Configuration;
 using EstateFlow.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,10 +13,40 @@ builder.Services.AddControllersWithViews();
 builder.Services.Configure<GeminiOptions>(
     builder.Configuration.GetSection(GeminiOptions.SectionName));
 
-builder.Services.AddHttpClient<IGeminiPropertyService, GeminiPropertyService>(client =>
+// Local LLM configuration (LM Studio)
+builder.Services.Configure<LocalLlmOptions>(
+    builder.Configuration.GetSection(LocalLlmOptions.SectionName));
+
+// Gemini adapter
+builder.Services.AddHttpClient<GeminiPropertyService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(20);
 });
+
+// Local LLM adapter
+builder.Services.AddHttpClient<
+    ILocalLlmPropertyService,
+    LocalLlmPropertyService>((sp, client) =>
+    {
+        var options = sp.GetRequiredService<
+            IOptions<LocalLlmOptions>>().Value;
+
+        var baseUrl = options.BaseUrl.TrimEnd('/') + "/";
+
+        client.BaseAddress = new Uri(baseUrl);
+
+        // Timeout is managed by CancellationTokenSource inside LocalLlmPropertyService.
+        client.Timeout = Timeout.InfiniteTimeSpan;
+    });
+
+// Shared Circuit Breaker state.
+builder.Services.AddSingleton<LocalLlmCircuitBreaker>();
+
+// Controller uses the same IGeminiPropertyService interface.
+// The fallback service selects the actual provider.
+builder.Services.AddTransient<
+    IGeminiPropertyService,
+    FallbackPropertyAiService>();
 
 // Съществуващата SQLite връзка за имотите.
 var connectionString = builder.Configuration.GetConnectionString("EstateFlowDb")

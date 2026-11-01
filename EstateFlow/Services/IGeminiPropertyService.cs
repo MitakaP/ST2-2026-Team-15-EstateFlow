@@ -6,6 +6,11 @@ namespace EstateFlow.Services;
 public sealed record PropertyAiResult(PropertyQuery? Query, string? Error)
 {
     public bool IsSuccess => Query is not null && Error is null;
+
+    public string? Provider { get; init; }
+
+    public bool UsedFallback { get; init; }
+
     public static PropertyAiResult Ok(PropertyQuery query) => new(query, null);
     public static PropertyAiResult Fail(string error) => new(null, error);
 }

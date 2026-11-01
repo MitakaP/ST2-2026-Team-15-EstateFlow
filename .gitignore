@@ -37,3 +37,11 @@ secrets.json
 # Uploaded profile images (user-generated)
 **/wwwroot/uploads/profiles/*
 !**/wwwroot/uploads/profiles/.gitkeep
+
+
+# Local AI model weights
+*.gguf
+*.safetensors
+
+# Optional local inference server model storage
+LocalLlmServer/models/

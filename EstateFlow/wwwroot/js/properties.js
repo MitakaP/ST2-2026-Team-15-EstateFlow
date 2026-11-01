@@ -421,14 +421,22 @@
         'properties-ai-status'
     );
 
+    const aiProvider = document.getElementById(
+        'properties-ai-provider'
+    );
+
     let originalProperties = [];
 
     aiForm.addEventListener('submit', async e => {
         e.preventDefault();
 
         aiSubmit.disabled = true;
+
+        aiProvider.className = 'badge bg-secondary ms-2 d-none';
+        aiProvider.textContent = '';
+
         aiStatus.className = 'small mt-2 text-muted';
-        aiStatus.textContent = 'Gemini обработва заявката...';
+        aiStatus.textContent = 'ИИ обработва заявката...';
 
         try {
             const response = await fetch(
@@ -455,6 +463,20 @@
 
             applyFilter();
 
+            const provider = data.provider || 'Неизвестен ИИ модел';
+            const usedFallback = data.usedFallback === true;
+            const isLocal = provider.startsWith('Локален модел');
+
+            aiProvider.textContent = usedFallback
+                ? `${provider} (резервен)`
+                : provider;
+
+            aiProvider.className = usedFallback
+                ? 'badge bg-warning text-dark ms-2'
+                : isLocal
+                    ? 'badge bg-success ms-2'
+                    : 'badge bg-primary ms-2';
+
             aiStatus.className =
                 'small mt-2 text-success';
 
@@ -469,6 +491,9 @@
             aiStatus.textContent =
                 err.message;
 
+            aiProvider.className = 'badge bg-secondary ms-2 d-none';
+            aiProvider.textContent = '';
+
         } finally {
             aiSubmit.disabled = false;
         }
@@ -481,6 +506,8 @@
     aiReset.addEventListener('click', () => {
         aiQuery.value = '';
         aiStatus.textContent = '';
+        aiProvider.className = 'badge bg-secondary ms-2 d-none';
+        aiProvider.textContent = '';
         els.filter.value = '';
 
         state.all = originalProperties.slice();

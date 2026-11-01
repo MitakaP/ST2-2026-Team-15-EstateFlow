@@ -26,7 +26,10 @@
     <div class="card-body">
         <form id="properties-ai-form" class="rounded border p-3 bg-light mb-3">
             @Html.AntiForgeryToken()
-            <label for="properties-ai-query" class="form-label fw-semibold">✨ Интелигентно търсене с Gemini</label>
+            <label for="properties-ai-query" class="form-label fw-semibold"> ✨ Интелигентно търсене с ИИ </label>
+            <span id="properties-ai-provider"
+                  class="badge bg-secondary ms-2 d-none">
+            </span>
             <div class="input-group">
                 <input type="text" id="properties-ai-query" name="query" class="form-control" maxlength="500"
                        placeholder="Например: апартаменти в Пловдив до 150000 евро, поне 3 стаи" required />

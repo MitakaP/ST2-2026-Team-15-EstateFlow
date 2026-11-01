@@ -4,7 +4,8 @@
 
 **Екип:** Team 15  
 **Хранилище:** [ST2-2026-Team-15-EstateFlow](https://github.com/MitakaP/ST2-2026-Team-15-EstateFlow)  
-**Технологии:** C#, ASP.NET Core 8 MVC, Razor Views, SQLite, Entity Framework Core, ASP.NET Core Identity, JavaScript, Bootstrap, Google Gemini REST API, Google Maps, xUnit.
+**Технологии:** C#, ASP.NET Core 8 MVC, Razor Views, SQLite, Entity Framework Core, ASP.NET Core Identity, JavaScript, Bootstrap, Google Gemini REST API, LM Studio, Local LLM, Google Maps, xUnit.  
+
 
 ## Основни функционалности
 
@@ -12,7 +13,7 @@
 - Преглед на подробности за конкретен имот.
 - Добавяне, редактиране и изтриване на имоти (CRUD).
 - Валидация на въведените данни, включително проверка за уникален референтен номер.
-- **Интелигентно търсене:** потребителят описва критериите си на български или английски, а Google Gemini ги преобразува в структурирана заявка. Приложението я валидира и извлича резултатите от SQLite.
+- **Интелигентно търсене с ИИ:** преобразуване на заявки на естествен език в структурирани критерии за търсене на имоти. Поддържа локален езиков модел чрез LM Studio и облачния Google Gemini, с автоматичен fallback при неуспех на локалния модел.
 - Сортиране по позволени полета, включително заявки само за сортиране без филтриращи условия.
 - **Google Maps:** визуализиране на местоположението на имота според въведения адрес, както и връзка за отваряне в Google Maps.
 - **Регистрация и вход:** създаване на потребителски акаунти чрез ASP.NET Core Identity с уникален nickname.
@@ -49,6 +50,21 @@
 - Проверка на разрешените колони и оператори и превод до **параметризирана SQL SELECT заявка** чрез `PropertyQuerySqlTranslator`.
 - Заявки само за сортиране (без `WHERE`, когато няма условия).
 - xUnit тестове за преводача, JSON конвертора и Gemini услугата със симулирани HTTP отговори.
+
+### Седмица 4 — Локален LLM, Gemini Fallback и Circuit Breaker
+
+Разширено е интелигентното търсене с възможност за използване на **локален езиков модел чрез LM Studio**, като съществуващата интеграция с Google Gemini се запазва.
+
+Реализирани са:
+
+- **Local LLM Adapter** — комуникация с локалния модел чрез `ILocalLlmPropertyService` и `LocalLlmPropertyService`, използвайки OpenAI-compatible REST API.
+- **Structured Output** — възможност за генериране на структуриран JSON чрез `response_format: json_schema`. Настройката `LocalLlm:UseJsonSchema` позволява включване и изключване на схемата.
+- **Gemini Fallback** — автоматично превключване към Gemini при недостъпен локален сървър, изтекъл таймаут или невалиден резултат чрез `FallbackPropertyAiService`.
+- **Circuit Breaker** — временно прескачане на локалния модел след неуспех чрез `LocalLlmCircuitBreaker`, с конфигурируем период за възстановяване.
+- **Конфигурация** — управление на локалния модел, API адреса, JSON Schema, таймаута и Circuit Breaker чрез `LocalLlmOptions`.
+- **Информация за AI доставчика** — визуализиране на използвания модел в интерфейса: локален модел, директен Gemini или резервен Gemini.
+- **Повторно използване на съществуващата логика** — локалният модел използва същия формат `PropertyQuery`, JSON конвертор и `PropertyQuerySqlTranslator` като Gemini.
+- **Автоматизирани тестове** — проверки за комуникацията с локалния модел, JSON Schema, обработката на грешки, fallback поведението и Circuit Breaker.
 
 ### Допълнителна функционалност — Google Maps
 
@@ -118,7 +134,7 @@
 | Подробности за имот | Да | Да |
 | Google Maps | Да | Да |
 | Обикновено филтриране | Да | Да |
-| Gemini AI търсене | Да | Да |
+| Интелигентно търсене с ИИ | Да | Да |
 | Регистрация и вход | Да | Да |
 | Добавяне на имот | Не | Да |
 | Редактиране на имот | Не | Да |
@@ -151,7 +167,8 @@
 | Views | `Views/Properties/*.cshtml`, `Views/Account/*.cshtml` | Потребителски интерфейс, форми и визуализация |
 | Controllers | `PropertiesController`, `AccountController`, `HomeController` | HTTP действия, удостоверяване и координация на услугите |
 | Data | `IDatabase`, `Database`, `ApplicationDbContext` | SQLite достъп, CRUD и Identity |
-| Services | `GeminiPropertyService`, `PropertyQuerySqlTranslator`, `PropertyLocation` | AI комуникация, превод на заявки и Google Maps URL адреси |
+| Services | `GeminiPropertyService`, `LocalLlmPropertyService`, `FallbackPropertyAiService`, `LocalLlmCircuitBreaker`, `PropertyQuerySqlTranslator`, `PropertyLocation` | AI комуникация, автоматичен fallback, превод на заявки и Google Maps URL адреси |
+
 
 **Основни Razor изгледи за имоти:** `Index`, `Details`, `Create`, `Edit`, `Delete`.
 
@@ -168,22 +185,68 @@
 PropertiesController.AiSearch
     |
     v
-IGeminiPropertyService / GeminiPropertyService
-    |  Google Gemini REST API
-    v
-PropertyQuery (структуриран JSON, а не SQL)
+IGeminiPropertyService / FallbackPropertyAiService
     |
-    v
-PropertyQuerySqlTranslator (разрешени полета и оператори)
-    |
-    v
-PropertySqlCommand (SQL + параметри)
-    |
-    v
-IDatabase.Search -> SQLite -> резултати в интерфейса
+    +-- UseLocalLlm = false ------------------------+
+    |                                              |
+    +-- UseLocalLlm = true                          |
+            |                                      |
+            v                                      |
+    LocalLlmCircuitBreaker                         |
+            |                                      |
+            +-- Отворен ----------------------------+
+            |                                      |
+            +-- Затворен                           |
+                    |                              |
+                    v                              |
+            LocalLlmPropertyService                |
+                    |                              |
+                    v                              |
+               LM Studio API                       |
+                    |                              |
+                    +-- Успех ------------------+   |
+                    |                           |   |
+                    +-- Неуспех                 |   |
+                            |                   |   |
+                            v                   |   |
+                  Circuit Breaker.Trip()        |   |
+                            |                   |   |
+                            +-------------------|---+
+                                                |   |
+                                                |   v
+                                                | GeminiPropertyService
+                                                |   |
+                                                |   v
+                                                | Google Gemini REST API
+                                                |   |
+                                                +---+
+                                                    |
+                                                    v
+                                         PropertyQuery
+                                  (структуриран JSON, а не SQL)
+                                                    |
+                                                    v
+                                     PropertyQuerySqlTranslator
+                                     (разрешени полета и оператори)
+                                                    |
+                                                    v
+                                         PropertySqlCommand
+                                          (SQL + параметри)
+                                                    |
+                                                    v
+                                    IDatabase.Search -> SQLite
+                                                    |
+                                                    v
+                                        Резултати в интерфейса
 ```
 
-ИИ **не изпълнява SQL** и няма директен достъп до базата данни. Gemini получава инструкции за позволените полета, но не получава редовете с имоти или личните контакти на брокерите. SQL се изгражда и изпълнява от приложението с параметри.
+При активиран локален модел `FallbackPropertyAiService` първо проверява състоянието на `LocalLlmCircuitBreaker`. Ако локалният модел е достъпен и върне валидна заявка, тя се използва директно. При неуспех или отворен Circuit Breaker се извиква Gemini.
+
+Ако и двата доставчика не успеят да обработят заявката, приложението връща съобщение за неуспех, вместо да изпълнява невалидна заявка.
+
+**ИИ не изпълнява SQL** и няма директен достъп до базата данни. И двата AI доставчика генерират `PropertyQuery`, който се валидира и преобразува в параметризиран SQL SELECT чрез `PropertyQuerySqlTranslator`.
+
+AI моделите не получават редовете с имоти или личните контакти на брокерите. SQL се изгражда и изпълнява от приложението с параметри.
 
 ### Поток на потребителското удостоверяване
 
@@ -217,10 +280,12 @@ Authentication Cookie
 | Шаблон | Реализация | Приложение |
 |---|---|---|
 | **Singleton** | `Database.Initialize(...)`, регистрация на `IDatabase` чрез `AddSingleton` | Един споделен обект за работа с базата |
-| **Adapter / Facade** | `IGeminiPropertyService`, `GeminiPropertyService` | Скриване на HTTP комуникацията с Gemini зад услуга |
+| **Adapter** | `GeminiPropertyService`, `LocalLlmPropertyService`, `IGeminiPropertyService`, `ILocalLlmPropertyService` | Скриване на HTTP комуникацията и специфичните API формати на Gemini и LM Studio зад услуги |
+| **Facade / Orchestrator** | `FallbackPropertyAiService` | Централизиране на избора между локален модел и Gemini, без контролерът да управлява двата доставчика |
+| **Circuit Breaker** | `LocalLlmCircuitBreaker` | Временно прескачане на локалния модел след неуспех и повторен опит след периода за възстановяване |
 | **Interpreter / Translator** | `PropertyQuery`, `PropertyQuerySqlTranslator`, `PropertySqlCommand` | Интерпретиране на ограничена заявка и преобразуването ѝ в параметризиран SQL |
-| **Result Object** | `PropertyAiResult` | Представяне на успешен AI резултат или очаквана грешка |
-| **Options Pattern** | `GeminiOptions`, `IOptions<GeminiOptions>` | Типизирана конфигурация на Gemini API |
+| **Result Object** | `PropertyAiResult` | Представяне на успешен AI резултат или очаквана грешка, включително информация за използвания доставчик |
+| **Options Pattern** | `GeminiOptions`, `LocalLlmOptions`, `IOptions<T>` | Типизирана конфигурация на облачния и локалния AI доставчик |
 
 Интерфейсът `IDatabase` допълнително отделя контролерите от конкретната SQLite реализация и осигурява **repository-подобна абстракция**.
 
@@ -231,13 +296,14 @@ Authentication Cookie
 ```text
 EstateFlow.sln
 EstateFlow/
-├── Configuration/          # GeminiOptions
+├── Configuration/          # GeminiOptions, LocalLlmOptions
 ├── Controllers/            # PropertiesController, AccountController, HomeController
 ├── Data/                   # IDatabase, Database, ApplicationDbContext
 ├── Enums/                  # PropertyType
 ├── Migrations/             # EF Core Identity миграции
 ├── Models/                 # Property, PropertyQuery и др.
-├── Services/               # Gemini, SQL translator, PropertyLocation
+├── Services/               # Gemini, Local LLM, Fallback, Circuit Breaker,
+│                           # SQL translator, PropertyLocation
 ├── Validations/            # Валидация за уникалност
 ├── ViewModels/             # Модели за Login, Register и редактиране на профила
 ├── Views/
@@ -252,8 +318,10 @@ EstateFlow/
 EstateFlow.Tests/
 ├── AuthenticationIntegrationTests.cs
 ├── EstateFlowWebApplicationFactory.cs
+├── FallbackPropertyAiServiceTests.cs
 ├── FlexibleStringConverterTests.cs
 ├── GeminiPropertyServiceTests.cs
+├── LocalLlmPropertyServiceTests.cs
 ├── PropertyQuerySqlTranslatorTests.cs
 └── EstateFlow.Tests.csproj
 ```
@@ -263,10 +331,10 @@ EstateFlow.Tests/
 - **.NET 8 SDK**.
 - Visual Studio с workload **ASP.NET and web development** или друг редактор с .NET поддръжка.
 - SQLite — използва се чрез NuGet пакетите на проекта.
-- Интернет връзка и собствен Gemini API ключ за интелигентното търсене.
+- Интернет връзка и собствен Gemini API ключ за използване на облачния AI доставчик и автоматичния fallback. За локално AI търсене е необходим LM Studio със зареден съвместим модел.
 - Достъп до Google Maps за показване на картите.
 
-Основните CRUD функции, регистрацията и входът работят локално. Gemini AI търсенето изисква достъп до външната услуга.
+Основните CRUD функции, регистрацията и входът работят локално. Интелигентното търсене изисква достъпен AI доставчик — локален модел чрез LM Studio или Google Gemini. За използване на Gemini, включително като резервен доставчик, са необходими интернет връзка и валиден API ключ.
 
 ## Стартиране на проекта
 
@@ -359,6 +427,84 @@ dotnet user-secrets set "Gemini:ApiKey" "YOUR_GEMINI_API_KEY" --project EstateFl
 
 `secrets.json` от User Secrets се намира извън директорията на хранилището. При работа на друг компютър ключът трябва да се конфигурира локално.
 
+## Настройване на локален LLM (LM Studio)
+
+EstateFlow поддържа локално интелигентно търсене чрез **LM Studio**, без необходимост заявките да се обработват от външен AI доставчик при успешна локална обработка.
+
+Използва се OpenAI-compatible REST API на LM Studio. За първоначалната реализация е избран моделът **Gemma-2-Ataraxy-v3b-9B**, като архитектурата позволява използване и на други съвместими модели.
+
+**Конфигурация**
+
+Настройките се намират в `EstateFlow/appsettings.json`, секция `LocalLlm`:
+
+```json
+"LocalLlm": {
+  "UseLocalLlm": false,
+  "BaseUrl": "http://localhost:1234/",
+  "Endpoint": "v1/chat/completions",
+  "Model": "gemma-2-ataraxy-v3b-9b",
+  "Temperature": 0.1,
+  "UseJsonSchema": true,
+  "TimeoutSeconds": 60,
+  "CircuitBreakerCooldownSeconds": 120
+}
+```
+
+Основните настройки са:
+
+- `UseLocalLlm` — определя дали първо да се използва локалният модел. При `false` заявките се обработват директно от Gemini.
+- `BaseUrl` — адрес на локалния API сървър.
+- `Endpoint` — HTTP endpoint за генериране на отговори.
+- `Model` — идентификатор на модела, зареден в LM Studio.
+- `Temperature` — контролира вариативността на генерирания отговор.
+- `UseJsonSchema` — включва или изключва Structured Output чрез JSON Schema.
+- `TimeoutSeconds` — максимално време за обработка на локална заявка.
+- `CircuitBreakerCooldownSeconds` — период, през който локалният модел се прескача след неуспех.
+
+**Стартиране на локалния модел**
+
+1. Инсталирайте LM Studio.
+2. Изтеглете съвместим езиков модел и го заредете в приложението.
+3. Стартирайте локалния API сървър на `http://localhost:1234/`.
+4. Проверете идентификатора на модела чрез `GET /v1/models`.
+5. Задайте идентификатора в `LocalLlm:Model` и активирайте `LocalLlm:UseLocalLlm`.
+
+За активиране само на конкретния компютър може да се използва .NET User Secrets:
+
+```bash
+dotnet user-secrets set "LocalLlm:UseLocalLlm" "true" --project EstateFlow/EstateFlow.csproj
+```
+
+По подразбиране локалният модел е изключен, за да може приложението да работи с Gemini на компютри, на които LM Studio не е инсталиран.
+
+**Structured Output (JSON Schema)**
+
+При `UseJsonSchema = true` приложението изпраща JSON Schema към LM Studio, която определя допустимата структура на `PropertyQuery`, включително полетата за филтриране, операторите и сортирането.
+
+Това подобрява надеждността на структурирания отговор, но не гарантира правилна интерпретация на всяка заявка на естествен език.
+
+При `UseJsonSchema = false` полето `response_format` не се изпраща. Този режим може да се използва за модели или сървъри, които не поддържат Structured Output.
+
+Настройката `UseJsonSchema` се управлява от `appsettings.json`. За първоначалния модел препоръчителната стойност е `true`.
+
+**Автоматичен fallback и Circuit Breaker**
+
+При активиран локален модел EstateFlow първо изпраща заявката към LM Studio.
+
+Ако локалният модел не отговори успешно, приложението преминава към Google Gemini. След неуспех Circuit Breaker временно прескача локалните заявки, за да избегне повтарящи се забавяния.
+
+След изтичане на конфигурирания период следващата заявка отново опитва локалния модел.
+
+Потребителският интерфейс показва действително използвания AI доставчик:
+
+- **Локален модел** — зелен индикатор.
+- **Gemini** — син индикатор при директно използване.
+- **Gemini (резервен)** — оранжев индикатор при fallback.
+
+Локалните файлове с теглата на моделите не се публикуват в GitHub. Те са изключени от хранилището чрез `.gitignore`.
+
+EstateFlow използва AI моделите единствено за генериране на структурирани критерии. Те не изпълняват SQL заявки директно и нямат пряк достъп до SQLite базата.
+
 ## Google Maps конфигурация
 
 EstateFlow използва класа `PropertyLocation`, който генерира адреси за Google Maps въз основа на въведените данни за имота.
@@ -424,8 +570,11 @@ dotnet test EstateFlow.sln
 - Екраниране на специалните символи в `LIKE`.
 - Преобразуване на JSON числа към низове чрез `FlexibleStringConverter`.
 - Успешни и неуспешни Gemini HTTP отговори чрез тестови `HttpMessageHandler` обекти.
+- Валидиране на локални LLM отговори, включително невалиден JSON и неразрешени полета.
+- Включване и изключване на JSON Schema и обработка на HTTP отговори чрез тестови `HttpMessageHandler` обекти.
+- Автоматичен fallback към Gemini при неуспех на локалния модел и проверка на състоянието на `LocalLlmCircuitBreaker`.
 
-Тестовете на Gemini услугата не изискват реални API повиквания.
+Тестовете за Gemini и локалния LLM използват симулирани HTTP отговори и не изискват реални API повиквания или стартиран LM Studio.
 
 ### Интеграционни тестове за Identity
 
@@ -488,3 +637,5 @@ dotnet test EstateFlow.sln
 Интеграцията на Google Maps е адаптирана към модела `Property` и структурата на приложението.
 
 Функционалността за управление на потребители е реализирана чрез ASP.NET Core Identity, Entity Framework Core и SQLite, с интеграционни тестове за удостоверяване и защита на ресурсите. Разширението за потребителски профили включва nickname, данни за контакт, биография и редактор за аватар.
+
+Интеграцията на локален езиков модел чрез LM Studio, автоматичният fallback към Gemini и Circuit Breaker са разработени с оглед на лабораторното ръководство *„ContactsMVC — локален LLM (LM Studio) с fallback към Gemini“* (ФМИ, ПУ „Паисий Хилендарски“, 2026). Архитектурният подход е адаптиран към моделите, услугите и функционалностите за търсене на недвижими имоти в EstateFlow.

@@ -7,7 +7,51 @@
 
     // Проверяваме дали потребителят е вписан.
     // Стойността идва от data-is-authenticated в Index.cshtml.
+    const isAdmin = app.dataset.isAdmin === 'true';
+    const currentUserId = app.dataset.currentUserId;
     const isAuthenticated = app.dataset.isAuthenticated === 'true';
+    const favoriteIds = new Set();
+    const token = document.querySelector('#favorites-token-form input[name="__RequestVerificationToken"]')?.value;
+
+    function favoriteButton(propertyId) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm btn-outline-danger';
+        const refresh = () => {
+            const saved = favoriteIds.has(propertyId);
+            button.textContent = saved ? '♥' : '♡';
+            button.title = saved ? 'Премахни от любими' : 'Добави в любими';
+            button.setAttribute('aria-label', button.title);
+        };
+        refresh();
+        button.addEventListener('click', async () => {
+            if (!isAuthenticated) {
+                window.location.assign(app.dataset.loginUrl);
+                return;
+            }
+            button.disabled = true;
+            try {
+                const data = new URLSearchParams({ propertyId: String(propertyId), __RequestVerificationToken: token });
+                const response = await fetch(app.dataset.favoriteToggleUrl, {
+                    method: 'POST',
+                    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: data
+                });
+                if (!response.ok) throw new Error('Неуспешно запазване на любим имот.');
+                const result = await response.json();
+                if (result.isFavorite) favoriteIds.add(propertyId);
+                else favoriteIds.delete(propertyId);
+                document.querySelectorAll('[data-favorite-id="' + propertyId + '"]').forEach(b => {
+                    b.textContent = result.isFavorite ? '♥' : '♡';
+                    b.title = result.isFavorite ? 'Премахни от любими' : 'Добави в любими';
+                    b.setAttribute('aria-label', b.title);
+                });
+            } catch (err) { alert(err.message); }
+            finally { button.disabled = false; }
+        });
+        button.dataset.favoriteId = String(propertyId);
+        return button;
+    }
 
     const els = {
         body: document.getElementById('properties-body'),
@@ -203,8 +247,10 @@
                 )
             );
 
+            group.appendChild(favoriteButton(c.id));
+
             // Редакция и изтриване само за вписани потребители.
-            if (isAuthenticated) {
+            if (isAdmin || (currentUserId && c.ownerId === currentUserId)) {
                 group.appendChild(
                     actionButton(
                         link(app.dataset.editUrl, c.id),
@@ -518,6 +564,16 @@
     // ==========================================
     // ПЪРВОНАЧАЛНО ЗАРЕЖДАНЕ НА ИМОТИТЕ
     // ==========================================
+
+    if (isAuthenticated) {
+        fetch(app.dataset.favoriteIdsUrl, { headers: { Accept: 'application/json' } })
+            .then(r => r.ok ? r.json() : [])
+            .then(ids => {
+                ids.forEach(id => favoriteIds.add(id));
+                render();
+            })
+            .catch(() => {});
+    }
 
     fetch(app.dataset.listUrl, {
         headers: {

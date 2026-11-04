@@ -17,6 +17,8 @@ public class AuthenticationIntegrationTests
     [InlineData("/Properties/Create")]
     [InlineData("/Properties/Edit/1")]
     [InlineData("/Properties/Delete/1")]
+    [InlineData("/Favorites")]
+    [InlineData("/Favorites/Ids")]
     public async Task Guest_ProtectedPage_RedirectsToLogin(
         string url)
     {
@@ -138,6 +140,9 @@ public class AuthenticationIntegrationTests
 
         Assert.NotNull(user);
         Assert.Equal(email, user.Email);
+        Assert.True(await userManager.IsInRoleAsync(user, "User"));
+        Assert.False(await userManager.IsInRoleAsync(user, "Broker"));
+        Assert.False(await userManager.IsInRoleAsync(user, "Admin"));
     }
 
     [Fact]
@@ -287,10 +292,11 @@ public class AuthenticationIntegrationTests
 
         Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
 
-        // Проверяваме дали потребителят има достъп след Login.
+        // Вписването не дава административни права на обикновения потребител.
         using var protectedResponse = await client.GetAsync("/Properties/Create");
 
-        Assert.Equal(HttpStatusCode.OK, protectedResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, protectedResponse.StatusCode);
+        Assert.Contains("/Account/AccessDenied", protectedResponse.Headers.Location!.ToString());
 
         // Зареждаме страницата, за да вземем нов antiforgery токен.
         var indexPage = await client.GetAsync("/");

@@ -6,7 +6,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Обяви</h1>
 
-    @if (User.Identity?.IsAuthenticated == true)
+    @if ((User.IsInRole("Broker") || User.IsInRole("Admin")))
     {
         <a asp-action="Create" class="btn btn-primary">
             + Добави имот
@@ -17,13 +17,22 @@
 
 <div class="card shadow-sm"
      id="properties-app"
+     data-favorite-ids-url="@Url.Action("Ids", "Favorites")"
+     data-favorite-toggle-url="@Url.Action("Toggle", "Favorites")"
+     data-login-url="@Url.Action("Login", "Account")"
      data-is-authenticated="@(User.Identity?.IsAuthenticated == true ? "true" : "false")"
+     data-is-admin="@(User.IsInRole("Admin") ? "true" : "false")"
+     data-current-user-id="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)"
      data-list-url="@Url.Action("List")"
      data-ai-url="@Url.Action("AiSearch")"
      data-details-url="@Url.Action("Details", new { id = "__ID__" })"
      data-edit-url="@Url.Action("Edit", new { id = "__ID__" })"
      data-delete-url="@Url.Action("Delete", new { id = "__ID__" })">
     <div class="card-body">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form id="favorites-token-form" class="d-none">@Html.AntiForgeryToken()</form>
+        }
         <form id="properties-ai-form" class="rounded border p-3 bg-light mb-3">
             @Html.AntiForgeryToken()
             <label for="properties-ai-query" class="form-label fw-semibold"> ✨ Интелигентно търсене с ИИ </label>

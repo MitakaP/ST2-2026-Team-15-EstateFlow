@@ -63,6 +63,17 @@
 
                         @if (User.Identity?.IsAuthenticated == true)
                         {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Favorites" asp-action="Index">♥ Любими</a></li>
+                        }
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Admin" asp-action="Users">Потребители</a></li>
+                        }
+
+                        @if (User.IsInRole("Broker") || User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Properties" asp-action="MyProperties">Моите имоти</a></li>
                             <li class="nav-item">
                                 <a class="nav-link"
                                    asp-controller="Properties"

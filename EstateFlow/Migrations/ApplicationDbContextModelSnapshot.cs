@@ -17,6 +17,15 @@ namespace EstateFlow.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.31");
 
+            modelBuilder.Entity("EstateFlow.Models.FavoriteProperty", b =>
+                {
+                    b.Property<string>("UserId").HasColumnType("TEXT");
+                    b.Property<int>("PropertyId").HasColumnType("INTEGER");
+                    b.Property<DateTime>("AddedAtUtc").HasColumnType("TEXT");
+                    b.HasKey("UserId", "PropertyId");
+                    b.ToTable("FavoriteProperties");
+                });
+
             modelBuilder.Entity("EstateFlow.Models.UserProfile", b =>
                 {
                     b.Property<string>("UserId").HasColumnType("TEXT");
@@ -221,6 +230,15 @@ namespace EstateFlow.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("EstateFlow.Models.FavoriteProperty", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("EstateFlow.Models.UserProfile", b =>

@@ -1,6 +1,7 @@
 using EstateFlow.Data;
 using EstateFlow.Models;
 using EstateFlow.ViewModels;
+using EstateFlow.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,16 @@ public class AccountController : Controller
             return View(model);
         }
 
+        // Every public registration always receives the User role.
+        // Roles are selected only by an administrator.
+        var assigned = await _userManager.AddToRoleAsync(user, AppRoles.User);
+        if (!assigned.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            ModelState.AddModelError("", "Неуспешно задаване на потребителска роля.");
+            return View(model);
+        }
+
         try
         {
             _db.UserProfiles.Add(new UserProfile { UserId = user.Id, Nickname = nickname });
@@ -62,6 +73,9 @@ public class AccountController : Controller
         await _signInManager.SignInAsync(user, false);
         return RedirectToAction("Index", "Properties");
     }
+
+    [HttpGet]
+    public IActionResult AccessDenied() => View();
 
     [HttpGet, AllowAnonymous]
     public IActionResult Login() => View();

@@ -1,0 +1,38 @@
+@model IReadOnlyList<EstateFlow.Controllers.AdminUserRow>
+@using EstateFlow.Security
+@{
+    ViewData["Title"] = "Управление на потребители";
+}
+<h1 class="h3 mb-3">Потребители и роли</h1>
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+<table class="table table-striped align-middle">
+    <thead><tr><th>Имейл</th><th>Роля</th><th>Действие</th></tr></thead>
+    <tbody>
+    @foreach (var user in Model)
+    {
+        var isAdmin = user.Roles.Contains(AppRoles.Admin);
+        var isBroker = user.Roles.Contains(AppRoles.Broker);
+        <tr>
+            <td>@user.Email</td>
+            <td>@(isAdmin ? "Admin" : isBroker ? "Broker" : "User")</td>
+            <td>
+                @if (!isAdmin)
+                {
+                    <form asp-action="SetBroker" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@user.Id" />
+                        <input type="hidden" name="isBroker" value="@(isBroker ? "false" : "true")" />
+                        <button type="submit" class="btn btn-sm @(isBroker ? "btn-outline-secondary" : "btn-outline-primary")">
+                            @(isBroker ? "Направи потребител" : "Одобри като брокер")
+                        </button>
+                    </form>
+                }
+                else { <span class="text-muted">Администратор</span> }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

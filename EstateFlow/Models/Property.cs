@@ -1,4 +1,4 @@
-﻿using EstateFlow.Enums;
+using EstateFlow.Enums;
 using EstateFlow.Validations;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -16,6 +16,9 @@ public class Property
     public const string EmailPattern = @"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$";
 
     public int Id { get; set; }
+
+    // Identity user ID; null for existing/seeded listings. Never bound from a form.
+    public string? OwnerId { get; set; }
 
     [Display(Name = "Реф. номер")]
     [Required(ErrorMessage = "Референтният номер е задължителен.")]

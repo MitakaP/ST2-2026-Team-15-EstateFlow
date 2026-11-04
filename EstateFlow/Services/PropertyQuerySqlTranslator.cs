@@ -16,7 +16,7 @@ public static class PropertyQuerySqlTranslator
     private const string BaseSelect =
         "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, " +
         "City, Neighborhood, Street, Floor, Price, Area, " +
-        "Description, ContactPhone, ContactEmail FROM Properties";
+        "Description, ContactPhone, ContactEmail, OwnerId FROM Properties";
 
     private static readonly IReadOnlyDictionary<string, string> Columns =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

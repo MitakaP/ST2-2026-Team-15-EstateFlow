@@ -1,0 +1,32 @@
+@model IReadOnlyList<EstateFlow.Models.Property>
+@{
+    ViewData["Title"] = "Любими имоти";
+}
+<h1 class="h3 mb-3">♡ Любими имоти</h1>
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">Нямате запазени имоти. <a asp-controller="Properties" asp-action="Index">Разгледайте обявите</a>.</div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var property in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h2 class="h5"><a asp-controller="Properties" asp-action="Details" asp-route-id="@property.Id">@property.ReferenceNumber</a></h2>
+                        <p class="mb-1">@property.City, @property.Neighborhood</p>
+                        <p class="fw-semibold text-success mb-1">@property.Price.ToString("N0") €</p>
+                        <p class="text-muted">@property.Area кв.м.</p>
+                        <form asp-controller="Favorites" asp-action="Toggle" method="post">
+                            <input type="hidden" name="propertyId" value="@property.Id" />
+                            <input type="hidden" name="returnUrl" value="@Url.Action("Index", "Favorites")" />
+                            <button class="btn btn-sm btn-outline-danger" type="submit">♥ Премахни от любими</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

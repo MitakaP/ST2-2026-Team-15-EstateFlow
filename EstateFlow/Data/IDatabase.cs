@@ -11,6 +11,8 @@ namespace EstateFlow.Data
         int Add(Property property);
         bool Update(Property property);
         bool Delete(int id);
+        bool UpdateOwned(Property property, string ownerId);
+        bool DeleteOwned(int id, string ownerId);
 
         /// <summary>Има ли друг имот със същия референтен номер (без значение от регистъра)?</summary>
         bool ReferenceExists(string reference, int excludeId = 0);

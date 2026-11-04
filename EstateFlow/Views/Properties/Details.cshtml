@@ -1,9 +1,10 @@
-﻿@model EstateFlow.Models.Property
+@model EstateFlow.Models.Property
 @using EstateFlow.Services
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "Детайли: " + Model.ReferenceNumber;
+    var isFavorite = ViewData["IsFavorite"] is true;
 
     // Създаваме адрес за Google Maps от данните на имота.
     var mapQuery = PropertyLocation.MapQuery(Model);
@@ -21,7 +22,45 @@
         : null;
 }
 
-<h1 class="h3 mb-3">Обява: @Model.ReferenceNumber</h1>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+        <p class="text-uppercase text-muted small fw-semibold mb-1">EstateFlow · Детайли на имот</p>
+        <h1 class="h3 mb-0">Обява: @Model.ReferenceNumber</h1>
+    </div>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <form id="details-favorite-form" class="favorite-detail-form"
+              asp-controller="Favorites" asp-action="Toggle" method="post"
+              data-favorite-state="@(isFavorite ? "true" : "false")">
+            <input type="hidden" name="propertyId" value="@Model.Id" />
+            <input type="hidden" name="returnUrl" value="@Url.Action("Details", "Properties", new { id = Model.Id })" />
+            <button class="favorite-detail-button @(isFavorite ? "is-favorite" : "")" type="submit"
+                    aria-pressed="@(isFavorite ? "true" : "false")"
+                    aria-label="@(isFavorite ? "Премахни от любими" : "Добави в любими")"
+                    title="@(isFavorite ? "Премахни от любими" : "Добави в любими")">
+                <svg class="favorite-heart" viewBox="0 0 24 24" width="27" height="27" aria-hidden="true" focusable="false">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+                </svg>
+                <span class="favorite-detail-copy">
+                    <strong data-favorite-label>@(isFavorite ? "В любими" : "Запази в любими")</strong>
+                    <small data-favorite-hint>@(isFavorite ? "Натисни, за да премахнеш" : "Натисни сърцето, за да запазиш")</small>
+                </span>
+            </button>
+            <span id="favorite-detail-status" class="visually-hidden" role="status" aria-live="polite"></span>
+        </form>
+    }
+    else
+    {
+        <a class="favorite-detail-button favorite-login-link" asp-controller="Account" asp-action="Login"
+           asp-route-returnUrl="@Url.Action("Details", "Properties", new { id = Model.Id })"
+           aria-label="Влез, за да запазиш имота в любими">
+            <svg class="favorite-heart" viewBox="0 0 24 24" width="27" height="27" aria-hidden="true" focusable="false">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+            </svg>
+            <span class="favorite-detail-copy"><strong>Запази в любими</strong><small>Влез в профила си</small></span>
+        </a>
+    }
+</div>
 
 <div class="card shadow-sm">
     <div class="card-body">
@@ -172,9 +211,9 @@
     </div>
 
     <!-- БУТОНИ -->
-    <div class="card-footer d-flex gap-2">
+    <div class="card-footer d-flex gap-2 flex-wrap">
 
-        @if (User.Identity?.IsAuthenticated == true)
+        @if (User.IsInRole("Admin") || (User.IsInRole("Broker") && Model.OwnerId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
         {
             <a asp-action="Edit"
                asp-route-id="@Model.Id"
@@ -197,3 +236,7 @@
     </div>
 
 </div>
+
+@section Scripts {
+    <script src="~/js/property-details-favorite.js" asp-append-version="true"></script>
+}

@@ -1,6 +1,7 @@
 using EstateFlow.Data;
 using EstateFlow.Configuration;
 using EstateFlow.Services;
+using EstateFlow.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -134,6 +135,7 @@ if (app.Environment.IsDevelopment())
         .GetRequiredService<ApplicationDbContext>();
 
     await identityDb.Database.MigrateAsync();
+    await RoleInitializer.InitializeAsync(scope.ServiceProvider, app.Configuration);
 }
 
 app.Run();

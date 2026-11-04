@@ -1,6 +1,7 @@
 ﻿
 using System.Reflection;
 using EstateFlow.Data;
+using EstateFlow.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -138,6 +139,7 @@ public class EstateFlowWebApplicationFactory
             // Прилагаме миграциите единствено след
             // успешна проверка на тестовата база.
             db.Database.Migrate();
+            RoleInitializer.InitializeAsync(scope.ServiceProvider, host.Services.GetRequiredService<IConfiguration>()).GetAwaiter().GetResult();
 
             return host;
         }

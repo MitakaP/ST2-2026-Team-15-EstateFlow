@@ -70,10 +70,29 @@ public sealed class Database : IDatabase
                     Area            REAL NOT NULL,
                     Description     TEXT NULL,
                     ContactPhone    TEXT NOT NULL,
-                    ContactEmail    TEXT NOT NULL
+                    ContactEmail    TEXT NOT NULL,
+                    OwnerId         TEXT NULL
                 );
                 """;
             cmd.ExecuteNonQuery();
+        }
+
+        // Non-destructive migration for existing databases, including those with Identity tables.
+        using (var info = connection.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(Properties)";
+            using var reader = info.ExecuteReader();
+            var hasOwnerId = false;
+            while (reader.Read())
+                if (string.Equals(reader.GetString(1), "OwnerId", StringComparison.OrdinalIgnoreCase))
+                    hasOwnerId = true;
+            reader.Close();
+            if (!hasOwnerId)
+            {
+                using var alter = connection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Properties ADD COLUMN OwnerId TEXT NULL";
+                alter.ExecuteNonQuery();
+            }
         }
 
         if (isNewFile)
@@ -122,7 +141,8 @@ public sealed class Database : IDatabase
         Area = r.GetDouble(10),
         Description = r.IsDBNull(11) ? null : r.GetString(11),
         ContactPhone = r.GetString(12),
-        ContactEmail = r.GetString(13)
+        ContactEmail = r.GetString(13),
+        OwnerId = r.FieldCount > 14 && !r.IsDBNull(14) ? r.GetString(14) : null
     };
 
     // Нормализира номера: премахва излишни интервали и го прави с главни букви
@@ -144,13 +164,14 @@ public sealed class Database : IDatabase
         cmd.Parameters.AddWithValue("$description", string.IsNullOrWhiteSpace(p.Description) ? DBNull.Value : p.Description.Trim());
         cmd.Parameters.AddWithValue("$phone", p.ContactPhone.Trim());
         cmd.Parameters.AddWithValue("$email", p.ContactEmail.Trim());
+        cmd.Parameters.AddWithValue("$owner", (object?)p.OwnerId ?? DBNull.Value);
     }
 
     public IReadOnlyList<Property> GetAll()
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail FROM Properties ORDER BY Id DESC";
+        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId FROM Properties ORDER BY Id DESC";
 
         using var reader = cmd.ExecuteReader();
         var result = new List<Property>();
@@ -181,7 +202,7 @@ public sealed class Database : IDatabase
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail FROM Properties WHERE Id = $id";
+        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId FROM Properties WHERE Id = $id";
         cmd.Parameters.AddWithValue("$id", id);
 
         using var reader = cmd.ExecuteReader();
@@ -193,8 +214,8 @@ public sealed class Database : IDatabase
         using var connection = Open();
         using var cmd = connection.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail)
-            VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email);
+            INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId)
+            VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email, $owner);
             SELECT last_insert_rowid();
             """;
         Bind(cmd, p);
@@ -223,6 +244,35 @@ public sealed class Database : IDatabase
         using var cmd = connection.CreateCommand();
         cmd.CommandText = "DELETE FROM Properties WHERE Id = $id";
         cmd.Parameters.AddWithValue("$id", id);
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    // Ownership enforced in SQL as well as in the controller to prevent cross-user writes.
+    public bool UpdateOwned(Property p, string ownerId)
+    {
+        using var connection = Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            UPDATE Properties SET ReferenceNumber = $ref, ReferenceKey = $refKey, Type = $type,
+                Rooms = $rooms, City = $city, Neighborhood = $neighborhood, Street = $street,
+                Floor = $floor, Price = $price, Area = $area, Description = $description,
+                ContactPhone = $phone, ContactEmail = $email
+            WHERE Id = $id AND OwnerId = $owner
+            """;
+        Bind(cmd, p);
+        cmd.Parameters.AddWithValue("$id", p.Id);
+        // Bind already uses property.OwnerId; overwrite parameter with authenticated owner.
+        cmd.Parameters["$owner"].Value = ownerId;
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    public bool DeleteOwned(int id, string ownerId)
+    {
+        using var connection = Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM Properties WHERE Id = $id AND OwnerId = $owner";
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.Parameters.AddWithValue("$owner", ownerId);
         return cmd.ExecuteNonQuery() > 0;
     }
 

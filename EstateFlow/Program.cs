@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<PropertyImageService>();
 
 // Gemini AI
 builder.Services.Configure<GeminiOptions>(
@@ -136,6 +137,7 @@ if (app.Environment.IsDevelopment())
 
     await identityDb.Database.MigrateAsync();
     await RoleInitializer.InitializeAsync(scope.ServiceProvider, app.Configuration);
+    await DevelopmentDataInitializer.InitializeAsync(scope.ServiceProvider, app.Configuration);
 }
 
 app.Run();

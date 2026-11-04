@@ -16,7 +16,7 @@ public static class PropertyQuerySqlTranslator
     private const string BaseSelect =
         "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, " +
         "City, Neighborhood, Street, Floor, Price, Area, " +
-        "Description, ContactPhone, ContactEmail, OwnerId FROM Properties";
+        "Description, ContactPhone, ContactEmail, OwnerId, ImagePath FROM Properties";
 
     private static readonly IReadOnlyDictionary<string, string> Columns =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -171,13 +171,13 @@ public static class PropertyQuerySqlTranslator
                 parts.Add(op switch
                 {
                     "equals" =>
-                        $"LOWER({column}) = LOWER({param})",
+                        $"EFLOW_LOWER({column}) = EFLOW_LOWER({param})",
 
                     "notequals" =>
-                        $"({column} IS NULL OR LOWER({column}) <> LOWER({param}))",
+                        $"({column} IS NULL OR EFLOW_LOWER({column}) <> EFLOW_LOWER({param}))",
 
                     _ =>
-                        $"LOWER({column}) LIKE LOWER({param}) ESCAPE '\\'"
+                        $"EFLOW_LOWER({column}) LIKE EFLOW_LOWER({param}) ESCAPE '\\'"
                 });
             }
         }

@@ -71,7 +71,8 @@ public sealed class Database : IDatabase
                     Description     TEXT NULL,
                     ContactPhone    TEXT NOT NULL,
                     ContactEmail    TEXT NOT NULL,
-                    OwnerId         TEXT NULL
+                    OwnerId         TEXT NULL,
+                    ImagePath       TEXT NULL
                 );
                 """;
             cmd.ExecuteNonQuery();
@@ -83,14 +84,25 @@ public sealed class Database : IDatabase
             info.CommandText = "PRAGMA table_info(Properties)";
             using var reader = info.ExecuteReader();
             var hasOwnerId = false;
+            var hasImagePath = false;
             while (reader.Read())
+            {
                 if (string.Equals(reader.GetString(1), "OwnerId", StringComparison.OrdinalIgnoreCase))
                     hasOwnerId = true;
+                if (string.Equals(reader.GetString(1), "ImagePath", StringComparison.OrdinalIgnoreCase))
+                    hasImagePath = true;
+            }
             reader.Close();
             if (!hasOwnerId)
             {
                 using var alter = connection.CreateCommand();
                 alter.CommandText = "ALTER TABLE Properties ADD COLUMN OwnerId TEXT NULL";
+                alter.ExecuteNonQuery();
+            }
+            if (!hasImagePath)
+            {
+                using var alter = connection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Properties ADD COLUMN ImagePath TEXT NULL";
                 alter.ExecuteNonQuery();
             }
         }
@@ -103,19 +115,12 @@ public sealed class Database : IDatabase
 
     private static void Seed(SqliteConnection connection)
     {
-        var sampleProperties = new List<Property>
-        {
-            new() { ReferenceNumber = "PLO-10001", Type = PropertyType.Apartment, Rooms = 3, City = "Пловдив", Neighborhood = "Каменица 1", Street = "ул. Иларион Макариополски 5", Floor = 4, Price = 125000, Area = 95, Description = "Светъл тристаен апартамент след основен ремонт.", ContactPhone = "+359888123456", ContactEmail = "broker1@estateflow.com" },
-            new() { ReferenceNumber = "SOF-20002", Type = PropertyType.House, Rooms = 5, City = "София", Neighborhood = "Бояна", Street = null, Floor = null, Price = 450000, Area = 250, Description = "Луксозна къща с панорамна гледка към Витоша.", ContactPhone = "+359899654321", ContactEmail = "broker2@estateflow.com" },
-            new() { ReferenceNumber = "VAR-30003", Type = PropertyType.Land, Rooms = null, City = "Варна", Neighborhood = "Галата", Street = null, Floor = null, Price = 85000, Area = 1000, Description = "Парцел в регулация с морска панорама.", ContactPhone = "+359877112233", ContactEmail = "broker3@estateflow.com" },
-            new() { ReferenceNumber = "PLO-10004", Type = PropertyType.Apartment, Rooms = 2, City = "Пловдив", Neighborhood = "Смирненски", Street = "ул. Царевец 15", Floor = 2, Price = 82000, Area = 65, Description = "Двустаен апартамент в новострояща се сграда.", ContactPhone = "+359888123456", ContactEmail = "broker1@estateflow.com" },
-            new() { ReferenceNumber = "SOF-20005", Type = PropertyType.Office, Rooms = 2, City = "София", Neighborhood = "Младост 1", Street = "бул. Александър Малинов", Floor = 1, Price = 150000, Area = 120, Description = "Офис пространство на партерен етаж, подходящо за ИТ фирма.", ContactPhone = "+359899654321", ContactEmail = "broker2@estateflow.com" }
-        };
+        var sampleProperties = DemoPropertyCatalog.Create();
 
         using var tx = connection.BeginTransaction();
         using var cmd = connection.CreateCommand();
         cmd.Transaction = tx;
-        cmd.CommandText = "INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail) VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email)";
+        cmd.CommandText = "INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, ImagePath) VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email, $image)";
 
         foreach (var p in sampleProperties)
         {
@@ -142,7 +147,8 @@ public sealed class Database : IDatabase
         Description = r.IsDBNull(11) ? null : r.GetString(11),
         ContactPhone = r.GetString(12),
         ContactEmail = r.GetString(13),
-        OwnerId = r.FieldCount > 14 && !r.IsDBNull(14) ? r.GetString(14) : null
+        OwnerId = r.FieldCount > 14 && !r.IsDBNull(14) ? r.GetString(14) : null,
+        ImagePath = r.FieldCount > 15 && !r.IsDBNull(15) ? r.GetString(15) : null
     };
 
     // Нормализира номера: премахва излишни интервали и го прави с главни букви
@@ -165,13 +171,14 @@ public sealed class Database : IDatabase
         cmd.Parameters.AddWithValue("$phone", p.ContactPhone.Trim());
         cmd.Parameters.AddWithValue("$email", p.ContactEmail.Trim());
         cmd.Parameters.AddWithValue("$owner", (object?)p.OwnerId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$image", (object?)p.ImagePath ?? DBNull.Value);
     }
 
     public IReadOnlyList<Property> GetAll()
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId FROM Properties ORDER BY Id DESC";
+        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId, ImagePath FROM Properties ORDER BY Id DESC";
 
         using var reader = cmd.ExecuteReader();
         var result = new List<Property>();
@@ -187,8 +194,9 @@ public sealed class Database : IDatabase
     {
         ArgumentNullException.ThrowIfNull(command);
         using var connection = Open();
-        // SQLite's built-in LOWER only handles ASCII; register Unicode-aware lowercase for Bulgarian.
-        connection.CreateFunction("LOWER", (string? value) => value?.ToLowerInvariant());
+        // Use an application-specific name: overriding built-in LOWER breaks EF queries
+        // when Microsoft.Data.Sqlite returns this connection to the shared pool.
+        connection.CreateFunction("EFLOW_LOWER", (string? value) => value?.ToLowerInvariant());
         using var cmd = connection.CreateCommand();
         cmd.CommandText = command.Sql;
         foreach (var pair in command.Parameters) cmd.Parameters.AddWithValue(pair.Key, pair.Value);
@@ -202,7 +210,7 @@ public sealed class Database : IDatabase
     {
         using var connection = Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId FROM Properties WHERE Id = $id";
+        cmd.CommandText = "SELECT Id, ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId, ImagePath FROM Properties WHERE Id = $id";
         cmd.Parameters.AddWithValue("$id", id);
 
         using var reader = cmd.ExecuteReader();
@@ -214,8 +222,8 @@ public sealed class Database : IDatabase
         using var connection = Open();
         using var cmd = connection.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId)
-            VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email, $owner);
+            INSERT INTO Properties (ReferenceNumber, ReferenceKey, Type, Rooms, City, Neighborhood, Street, Floor, Price, Area, Description, ContactPhone, ContactEmail, OwnerId, ImagePath)
+            VALUES ($ref, $refKey, $type, $rooms, $city, $neighborhood, $street, $floor, $price, $area, $description, $phone, $email, $owner, $image);
             SELECT last_insert_rowid();
             """;
         Bind(cmd, p);
@@ -230,7 +238,7 @@ public sealed class Database : IDatabase
             UPDATE Properties
             SET ReferenceNumber = $ref, ReferenceKey = $refKey, Type = $type, Rooms = $rooms, City = $city, 
                 Neighborhood = $neighborhood, Street = $street, Floor = $floor, Price = $price, Area = $area, 
-                Description = $description, ContactPhone = $phone, ContactEmail = $email
+                Description = $description, ContactPhone = $phone, ContactEmail = $email, ImagePath = $image
             WHERE Id = $id
             """;
         Bind(cmd, p);
@@ -256,7 +264,7 @@ public sealed class Database : IDatabase
             UPDATE Properties SET ReferenceNumber = $ref, ReferenceKey = $refKey, Type = $type,
                 Rooms = $rooms, City = $city, Neighborhood = $neighborhood, Street = $street,
                 Floor = $floor, Price = $price, Area = $area, Description = $description,
-                ContactPhone = $phone, ContactEmail = $email
+                ContactPhone = $phone, ContactEmail = $email, ImagePath = $image
             WHERE Id = $id AND OwnerId = $owner
             """;
         Bind(cmd, p);

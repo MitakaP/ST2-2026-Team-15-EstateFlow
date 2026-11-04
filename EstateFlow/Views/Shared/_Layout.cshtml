@@ -3,179 +3,88 @@
 @inject EstateFlow.Data.ApplicationDbContext ProfileDb
 @{
     var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    var navbarProfile = currentUserId is null ? null : await ProfileDb.UserProfiles
-        .AsNoTracking().FirstOrDefaultAsync(p => p.UserId == currentUserId);
-    var navbarName = navbarProfile?.Nickname ?? User.Identity?.Name?.Split('@')[0] ?? "Профил";
+    var profile = currentUserId is null ? null : await ProfileDb.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == currentUserId);
+    var nickname = profile?.Nickname ?? User.Identity?.Name?.Split('@')[0] ?? "Профил";
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    string Active(string c, string a) => controller == c && action == a ? "is-active" : "";
+    var authenticated = User.Identity?.IsAuthenticated == true;
+    var manager = User.IsInRole("Broker") || User.IsInRole("Admin");
 }
-
 <!DOCTYPE html>
 <html lang="bg">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0" />
-
-    <title>@ViewData["Title"] - Estate Flow</title>
-
-    <link rel="stylesheet"
-          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-
-    <link rel="stylesheet"
-          href="~/css/site.css"
-          asp-append-version="true" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2c624c" />
+    <title>@ViewData["Title"] · EstateFlow</title>
+    <link rel="icon" href="~/images/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-
-<body class="bg-light">
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-dark bg-primary shadow-sm mb-4">
-            <div class="container">
-
-                <!-- ЛОГО -->
-                <a class="navbar-brand fw-semibold"
-                   asp-controller="Properties"
-                   asp-action="Index">
-                    &#127960; Estate Flow
-                </a>
-
-                <!-- МОБИЛНО МЕНЮ -->
-                <button class="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#nav"
-                        aria-controls="nav"
-                        aria-expanded="false"
-                        aria-label="Меню">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="nav">
-
-                    <!-- ЛЯВО МЕНЮ -->
-                    <ul class="navbar-nav me-auto">
-
-                        <li class="nav-item">
-                            <a class="nav-link"
-                               asp-controller="Properties"
-                               asp-action="Index">
-                                Обяви
-                            </a>
-                        </li>
-
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Favorites" asp-action="Index">♥ Любими</a></li>
-                        }
-
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Admin" asp-action="Users">Потребители</a></li>
-                        }
-
-                        @if (User.IsInRole("Broker") || User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Properties" asp-action="MyProperties">Моите имоти</a></li>
-                            <li class="nav-item">
-                                <a class="nav-link"
-                                   asp-controller="Properties"
-                                   asp-action="Create">
-                                    Добави имот
-                                </a>
-                            </li>
-                        }
-                    </ul>
-
-                    <!-- ДЯСНО МЕНЮ -->
-                    <ul class="navbar-nav ms-auto align-items-sm-center">
-
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <!-- ВПИСАН ПОТРЕБИТЕЛ -->
-                            <li class="nav-item">
-                                <a class="nav-link text-white d-flex align-items-center gap-2" asp-controller="Account" asp-action="Profile">
-                                    @if (!string.IsNullOrWhiteSpace(navbarProfile?.ProfileImagePath))
-                                    { <img src="@navbarProfile.ProfileImagePath" alt="" class="rounded-circle" style="width:28px;height:28px;object-fit:cover;object-position:center;flex-shrink:0" /> }
-                                    <span>Здравей, @navbarName!</span>
-                                </a>
-                            </li>
-
-                            <li class="nav-item ms-sm-2">
-                                <form asp-controller="Account"
-                                      asp-action="Logout"
-                                      method="post"
-                                      class="m-0">
-
-                                    @Html.AntiForgeryToken()
-
-                                    <button type="submit"
-                                            class="btn btn-outline-light btn-sm">
-                                        Изход
-                                    </button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <!-- ГОСТ -->
-                            <li class="nav-item">
-                                <a class="nav-link"
-                                   asp-controller="Account"
-                                   asp-action="Login">
-                                    Вход
-                                </a>
-                            </li>
-
-                            <li class="nav-item ms-sm-2">
-                                <a class="btn btn-light btn-sm"
-                                   asp-controller="Account"
-                                   asp-action="Register">
-                                    Регистрация
-                                </a>
-                            </li>
-                        }
-
-                    </ul>
-                </div>
-            </div>
-        </nav>
+<body>
+    <a href="#main-content" class="skip-link">Към съдържанието</a>
+    <header class="mobile-header">
+        <a class="brand" asp-controller="Properties" asp-action="Index"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#home" /></svg>EstateFlow<span>.</span></a>
+        <button id="menu-toggle" class="btn btn-outline-secondary" type="button" aria-controls="site-sidebar" aria-expanded="false" aria-label="Отвори менюто"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#menu" /></svg></button>
     </header>
-
-    <!-- ОСНОВНО СЪДЪРЖАНИЕ -->
-    <div class="container">
-        <main role="main" class="pb-4">
-
-            @if (TempData["Message"] is string message)
-            {
-                <div class="alert alert-success alert-dismissible fade show"
-                     role="alert">
-
-                    @message
-
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert"
-                            aria-label="Затвори">
-                    </button>
-                </div>
-            }
-
-            @RenderBody()
-
-        </main>
+    <div class="app-shell">
+        <aside class="sidebar" id="site-sidebar" aria-label="Основна навигация">
+            <a class="brand desktop-brand" asp-controller="Properties" asp-action="Index"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#home" /></svg>EstateFlow<span>.</span></a>
+            <p class="nav-caption">Твоето пространство</p>
+            <nav class="sidebar-nav">
+                <a class="sidebar-link @Active("Properties", "Index")" asp-controller="Properties" asp-action="Index"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#grid" /></svg>Всички обяви</a>
+                @if (authenticated)
+                {
+                    <a class="sidebar-link @Active("Favorites", "Index")" asp-controller="Favorites" asp-action="Index"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#heart" /></svg>Любими</a>
+                }
+                @if (manager)
+                {
+                    <a class="sidebar-link @Active("Properties", "MyProperties")" asp-controller="Properties" asp-action="MyProperties"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#building" /></svg>Моите имоти</a>
+                    <a class="sidebar-link @Active("Properties", "Create")" asp-controller="Properties" asp-action="Create"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#plus" /></svg>Добави имот</a>
+                }
+                @if (User.IsInRole("Admin"))
+                {
+                    <a class="sidebar-link @Active("Admin", "Users")" asp-controller="Admin" asp-action="Users"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#users" /></svg>Потребители</a>
+                }
+            </nav>
+            <div class="sidebar-bottom">
+                @if (authenticated)
+                {
+                    <!-- The only profile navigation entry in the shell. -->
+                    <a class="profile-link @(controller == "Account" && (action == "Profile" || action == "EditProfile") ? "is-active" : "")" asp-controller="Account" asp-action="Profile">
+                        @if (!string.IsNullOrWhiteSpace(profile?.ProfileImagePath))
+                        { <img class="avatar" src="@profile.ProfileImagePath" alt="" /> }
+                        else
+                        { <span class="avatar avatar-letter">@(nickname.Length > 0 ? nickname[..1].ToUpperInvariant() : "Е")</span> }
+                        <span class="profile-copy"><strong>Моят профил</strong><small>@nickname</small></span>
+                    </a>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form"><button type="submit" class="sidebar-link"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#logout" /></svg>Изход</button></form>
+                }
+                else
+                {
+                    <a class="btn btn-primary w-100 mb-2" asp-controller="Account" asp-action="Login">Вход</a>
+                    <a class="btn btn-outline-secondary w-100" asp-controller="Account" asp-action="Register">Регистрация</a>
+                }
+                <p class="sidebar-tagline">Пространство за ново начало.</p>
+            </div>
+        </aside>
+        <button id="menu-backdrop" class="menu-backdrop" type="button" aria-label="Затвори менюто" hidden></button>
+        <div class="workspace">
+            <div class="workspace-header"><span>EstateFlow <span class="breadcrumb-divider">/</span> @ViewData["Title"]</span><span class="workspace-location"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#pin" /></svg> България</span></div>
+            <main id="main-content" class="main-content" tabindex="-1">
+                @if (TempData["Message"] is string message)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="status">@message<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button></div>
+                }
+                @RenderBody()
+            </main>
+            <footer class="site-footer"><span>EstateFlow — твоето място за имоти.</span><span>Открий. Сравни. Избери.</span></footer>
+        </div>
     </div>
-
-    <!-- FOOTER -->
-    <footer class="border-top text-muted small py-3 text-center">
-        Estate Flow &middot; ASP.NET Core MVC
-        &middot; SQLite &middot; Bootstrap
-    </footer>
-
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script src="~/js/site.js"
-            asp-append-version="true"></script>
-
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

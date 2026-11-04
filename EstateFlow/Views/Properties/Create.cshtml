@@ -1,15 +1,15 @@
-﻿@model EstateFlow.Models.Property
+@model EstateFlow.Models.Property
 @{
     ViewData["Title"] = "Добавяне на имот";
 }
 
-<h1 class="h3 mb-3">Нова обява</h1>
+<div class="page-heading animate-in"><div><p class="eyebrow">Покажи най-доброто от имота</p><h1>Нова обява</h1></div></div>
 <div class="card shadow-sm">
     <div class="card-body">
-        <form asp-action="Create" novalidate>
+        <form asp-action="Create" method="post" enctype="multipart/form-data" novalidate>
             <partial name="_PropertyForm" model="Model" />
             <div class="mt-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Запис</button>
+                <button type="submit" class="btn btn-primary">Запази обявата</button>
                 <a asp-action="Index" class="btn btn-outline-secondary">Отказ</a>
             </div>
         </form>
@@ -18,4 +18,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/property-photo.js" asp-append-version="true"></script>
 }

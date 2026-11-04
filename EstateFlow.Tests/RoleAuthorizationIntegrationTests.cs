@@ -15,6 +15,19 @@ namespace EstateFlow.Tests;
 /// </summary>
 public class RoleAuthorizationIntegrationTests
 {
+    [Fact]
+    public async Task BrokerCreatePage_HasOneProfileLinkAndMultipartImageForm()
+    {
+        using var factory = new EstateFlowWebApplicationFactory();
+        using var client = await LoginAsAsync(factory, AppRoles.Broker);
+        using var response = await client.GetAsync("/Properties/Create");
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(Regex.Matches(html, "href=\"/Account/Profile\""));
+        Assert.Contains("enctype=\"multipart/form-data\"", html);
+        Assert.Contains("name=\"Photo\"", html);
+    }
+
     [Theory]
     [InlineData(AppRoles.User, HttpStatusCode.Redirect)]
     [InlineData(AppRoles.Broker, HttpStatusCode.OK)]

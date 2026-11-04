@@ -8,7 +8,7 @@
 {
     <div class="alert alert-danger">@error</div>
 }
-<table class="table table-striped align-middle">
+<div class="table-responsive"><table class="table table-striped align-middle">
     <thead><tr><th>Имейл</th><th>Роля</th><th>Действие</th></tr></thead>
     <tbody>
     @foreach (var user in Model)
@@ -35,4 +35,4 @@
         </tr>
     }
     </tbody>
-</table>
+</table></div>

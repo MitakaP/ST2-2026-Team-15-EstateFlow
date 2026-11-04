@@ -1,102 +1,57 @@
 @{
     ViewData["Title"] = "Обяви";
 }
-
-
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Обяви</h1>
-
-    @if ((User.IsInRole("Broker") || User.IsInRole("Admin")))
-    {
-        <a asp-action="Create" class="btn btn-primary">
-            + Добави имот
-        </a>
-    }
-</div>
-
-
-<div class="card shadow-sm"
-     id="properties-app"
+<section class="page-intro animate-in">
+    <p class="eyebrow">Пространство за ново начало</p>
+    <h1>Твоето място.<br /><em>По-близо, отколкото мислиш.</em></h1>
+    <p>Открий дом, в който да започне следващата ти история.</p>
+</section>
+<div id="properties-app"
      data-favorite-ids-url="@Url.Action("Ids", "Favorites")"
      data-favorite-toggle-url="@Url.Action("Toggle", "Favorites")"
-     data-login-url="@Url.Action("Login", "Account")"
+     data-login-url="@Url.Action("Login", "Account", new { returnUrl = Url.Action("Index", "Properties") })"
      data-is-authenticated="@(User.Identity?.IsAuthenticated == true ? "true" : "false")"
      data-is-admin="@(User.IsInRole("Admin") ? "true" : "false")"
+     data-is-broker="@(User.IsInRole("Broker") ? "true" : "false")"
      data-current-user-id="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)"
      data-list-url="@Url.Action("List")"
      data-ai-url="@Url.Action("AiSearch")"
      data-details-url="@Url.Action("Details", new { id = "__ID__" })"
      data-edit-url="@Url.Action("Edit", new { id = "__ID__" })"
      data-delete-url="@Url.Action("Delete", new { id = "__ID__" })">
-    <div class="card-body">
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <form id="favorites-token-form" class="d-none">@Html.AntiForgeryToken()</form>
-        }
-        <form id="properties-ai-form" class="rounded border p-3 bg-light mb-3">
-            @Html.AntiForgeryToken()
-            <label for="properties-ai-query" class="form-label fw-semibold"> ✨ Интелигентно търсене с ИИ </label>
-            <span id="properties-ai-provider"
-                  class="badge bg-secondary ms-2 d-none">
-            </span>
-            <div class="input-group">
-                <input type="text" id="properties-ai-query" name="query" class="form-control" maxlength="500"
-                       placeholder="Например: апартаменти в Пловдив до 150000 евро, поне 3 стаи" required />
-                <button type="submit" id="properties-ai-submit" class="btn btn-primary">Намери имоти</button>
-                <button type="button" id="properties-ai-reset" class="btn btn-outline-secondary">Изчисти</button>
-            </div>
-            <div id="properties-ai-status" class="small mt-2" role="status" aria-live="polite"></div>
-        </form>
-        <div class="row g-2 align-items-center mb-3">
-            <div class="col-12 col-md">
-                <div class="input-group search-box">
-                    <span class="input-group-text">&#128269;</span>
-                    <input type="search" id="properties-filter" class="form-control"
-                           placeholder="Търсене по номер, град, район, описание, цена..." autocomplete="off" />
-                </div>
-            </div>
-            <div class="col-auto">
-                <label for="properties-page-size" class="visually-hidden">Редове на страница</label>
-                <div class="input-group">
-                    <span class="input-group-text">Редове</span>
-                    <select id="properties-page-size" class="form-select">
-                        <option value="5">5</option>
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
-            </div>
+    @if (User.Identity?.IsAuthenticated == true)
+    { <form id="favorites-token-form" class="d-none">@Html.AntiForgeryToken()</form> }
+    <form id="properties-ai-form" class="ai-search">
+        @Html.AntiForgeryToken()
+        <div class="ai-label-line"><label for="properties-ai-query" class="ai-label"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#sparkles" /></svg>Опиши своя бъдещ дом</label><span id="properties-ai-provider" class="badge bg-secondary d-none"></span></div>
+        <div class="ai-input-row">
+            <input type="text" id="properties-ai-query" name="query" class="form-control" maxlength="500" placeholder="Например: апартамент в Пловдив до 150000 евро" required />
+            <button type="submit" id="properties-ai-submit" class="btn btn-primary"><span>Намери имот</span><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#arrow" /></svg></button>
+            <button type="button" id="properties-ai-reset" class="btn btn-outline-secondary">Изчисти</button>
         </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover table-striped table-properties align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Реф. номер</th>
-                        <th>Вид</th>
-                        <th>Град / Квартал</th>
-                        <th>Цена</th>
-                        <th>Площ</th>
-                        <th class="text-end">Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="properties-body">
-                    <tr><td colspan="7" class="text-center text-muted py-4">Зареждане на обяви...</td></tr>
-                </tbody>
-            </table>
+        <div class="ai-prompts" aria-label="Примерни заявки">
+            <button type="button" class="prompt-chip" data-ai-prompt="Апартаменти в Пловдив">В Пловдив</button>
+            <button type="button" class="prompt-chip" data-ai-prompt="Имоти до 150000 евро">До 150 000 €</button>
+            <button type="button" class="prompt-chip" data-ai-prompt="Къщи с поне 4 стаи">Къща с 4+ стаи</button>
         </div>
-
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
-            <div id="properties-info" class="text-muted small"></div>
-            <nav aria-label="Страници">
-                <ul id="properties-pagination" class="pagination pagination-sm mb-0"></ul>
-            </nav>
-        </div>
+        <div id="properties-ai-status" class="ai-status small mt-2" role="status" aria-live="polite"></div>
+    </form>
+    <div class="listing-toolbar"><h2>Избери следващия си адрес</h2><div class="type-filters" aria-label="Филтрирай по вид имот">
+        <button type="button" class="type-filter" data-property-type="" aria-pressed="true">Всички</button>
+        <button type="button" class="type-filter" data-property-type="0" aria-pressed="false">Апартаменти</button>
+        <button type="button" class="type-filter" data-property-type="1" aria-pressed="false">Къщи</button>
+        <button type="button" class="type-filter" data-property-type="2" aria-pressed="false">Парцели</button>
+        <button type="button" class="type-filter" data-property-type="3" aria-pressed="false">Офиси</button>
+        <button type="button" class="type-filter" data-property-type="4" aria-pressed="false">Гаражи</button>
+    </div></div>
+    <div class="catalog-tools"><div class="catalog-search"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#search" /></svg><label for="properties-filter" class="visually-hidden">Търси в обявите</label><input type="search" id="properties-filter" class="form-control" placeholder="Търси по град, район, номер..." autocomplete="off" /></div>
+        <div class="page-size-control"><label for="properties-page-size">На страница</label><select id="properties-page-size" class="form-select"><option value="6">6</option><option value="12" selected>12</option><option value="24">24</option><option value="48">48</option></select></div>
     </div>
+    <div id="properties-error" class="alert alert-danger catalog-error" role="alert" hidden></div>
+    <div id="properties-body" class="property-grid" aria-busy="true"><div class="empty-state" role="status">Зареждане на обяви…</div></div>
+    <noscript><p class="alert alert-info mt-3">Включете JavaScript, за да използвате каталога и търсенето.</p></noscript>
+    <div class="listing-footer"><div id="properties-info" class="text-muted small" role="status" aria-live="polite"></div><nav aria-label="Страници с обяви"><ul id="properties-pagination" class="pagination pagination-sm mb-0"></ul></nav></div>
 </div>
-
 @section Scripts {
     <script src="~/js/properties.js" asp-append-version="true"></script>
 }

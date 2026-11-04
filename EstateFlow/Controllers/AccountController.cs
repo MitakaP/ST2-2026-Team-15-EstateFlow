@@ -35,7 +35,9 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(model);
         var nickname = model.Nickname.Trim();
-        if (await _db.UserProfiles.AnyAsync(p => p.Nickname.ToLower() == nickname.ToLower()))
+        // Nicknames allow ASCII letters, digits and underscores. NOCASE compares them
+        // directly without depending on a built-in function on a pooled connection.
+        if (await _db.UserProfiles.AnyAsync(p => EF.Functions.Collate(p.Nickname, "NOCASE") == nickname))
         {
             ModelState.AddModelError(nameof(model.Nickname), "Nickname вече се използва.");
             return View(model);
@@ -153,7 +155,7 @@ public class AccountController : Controller
         model.ExistingImagePath = p?.ProfileImagePath;
         if (!ModelState.IsValid) return View(model);
         var nickname = model.Nickname.Trim();
-        if (await _db.UserProfiles.AnyAsync(x => x.UserId != user.Id && x.Nickname.ToLower() == nickname.ToLower()))
+        if (await _db.UserProfiles.AnyAsync(x => x.UserId != user.Id && EF.Functions.Collate(x.Nickname, "NOCASE") == nickname))
         {
             ModelState.AddModelError(nameof(model.Nickname), "Nickname вече се използва.");
             return View(model);

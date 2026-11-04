@@ -1,613 +1,179 @@
-
-(function () {
+(() => {
     'use strict';
-
     const app = document.getElementById('properties-app');
     if (!app) return;
-
-    // Проверяваме дали потребителят е вписан.
-    // Стойността идва от data-is-authenticated в Index.cshtml.
-    const isAdmin = app.dataset.isAdmin === 'true';
-    const currentUserId = app.dataset.currentUserId;
     const isAuthenticated = app.dataset.isAuthenticated === 'true';
+    const isAdmin = app.dataset.isAdmin === 'true';
+    const isBroker = app.dataset.isBroker === 'true';
     const favoriteIds = new Set();
     const token = document.querySelector('#favorites-token-form input[name="__RequestVerificationToken"]')?.value;
-
-    function favoriteButton(propertyId) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-sm btn-outline-danger';
-        const refresh = () => {
-            const saved = favoriteIds.has(propertyId);
-            button.textContent = saved ? '♥' : '♡';
-            button.title = saved ? 'Премахни от любими' : 'Добави в любими';
-            button.setAttribute('aria-label', button.title);
-        };
-        refresh();
-        button.addEventListener('click', async () => {
-            if (!isAuthenticated) {
-                window.location.assign(app.dataset.loginUrl);
-                return;
-            }
-            button.disabled = true;
-            try {
-                const data = new URLSearchParams({ propertyId: String(propertyId), __RequestVerificationToken: token });
-                const response = await fetch(app.dataset.favoriteToggleUrl, {
-                    method: 'POST',
-                    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                if (!response.ok) throw new Error('Неуспешно запазване на любим имот.');
-                const result = await response.json();
-                if (result.isFavorite) favoriteIds.add(propertyId);
-                else favoriteIds.delete(propertyId);
-                document.querySelectorAll('[data-favorite-id="' + propertyId + '"]').forEach(b => {
-                    b.textContent = result.isFavorite ? '♥' : '♡';
-                    b.title = result.isFavorite ? 'Премахни от любими' : 'Добави в любими';
-                    b.setAttribute('aria-label', b.title);
-                });
-            } catch (err) { alert(err.message); }
-            finally { button.disabled = false; }
-        });
-        button.dataset.favoriteId = String(propertyId);
-        return button;
-    }
-
     const els = {
-        body: document.getElementById('properties-body'),
-        filter: document.getElementById('properties-filter'),
-        pageSize: document.getElementById('properties-page-size'),
-        info: document.getElementById('properties-info'),
-        pagination: document.getElementById('properties-pagination')
+        body: document.getElementById('properties-body'), filter: document.getElementById('properties-filter'),
+        pageSize: document.getElementById('properties-page-size'), info: document.getElementById('properties-info'),
+        pagination: document.getElementById('properties-pagination'), error: document.getElementById('properties-error')
     };
-
-    const state = {
-        all: [],
-        filtered: [],
-        page: 1,
-        pageSize: parseInt(els.pageSize.value, 10),
-        terms: []
-    };
-
-    // Мапинг на Enum стойностите от C# към български.
-    const propertyTypes = {
-        0: 'Апартамент',
-        1: 'Къща',
-        2: 'Парцел',
-        3: 'Офис',
-        4: 'Гараж'
-    };
-
-    const escapeRegExp = s =>
-        s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    const norm = v =>
-        (v ?? '').toString().toLowerCase();
-
-    const link = (template, id) =>
-        template.replace('__ID__', encodeURIComponent(id));
-
-    // ==========================================
-    // ФИЛТРИРАНЕ
-    // ==========================================
-
-    function applyFilter() {
-        state.terms = norm(els.filter.value)
-            .split(/\s+/)
-            .filter(Boolean);
-
-        state.filtered = state.all.filter(c => {
-            const haystack = [
-                c.id,
-                c.referenceNumber,
-                propertyTypes[c.type],
-                c.city,
-                c.neighborhood,
-                c.street,
-                c.description,
-                c.price,
-                c.area,
-                c.rooms,
-                c.floor,
-                c.contactPhone,
-                c.contactEmail
-            ].map(f => norm(f));
-
-            // Логическо И: всяка дума трябва да бъде намерена.
-            return state.terms.every(t =>
-                haystack.some(h => h.includes(t))
-            );
-        });
-
-        state.page = 1;
-        render();
+    const aiForm = document.getElementById('properties-ai-form');
+    const aiQuery = document.getElementById('properties-ai-query');
+    const aiSubmit = document.getElementById('properties-ai-submit');
+    const aiReset = document.getElementById('properties-ai-reset');
+    const aiStatus = document.getElementById('properties-ai-status');
+    const aiProvider = document.getElementById('properties-ai-provider');
+    const state = { all: [], original: [], filtered: [], page: 1, pageSize: Number(els.pageSize.value), terms: [], type: '', loaded: false };
+    const propertyTypes = { 0: 'Апартамент', 1: 'Къща', 2: 'Парцел', 3: 'Офис', 4: 'Гараж' };
+    const norm = value => (value ?? '').toString().toLowerCase();
+    const link = (template, id) => template.replace('__ID__', encodeURIComponent(id));
+    const format = value => Number(value).toLocaleString('bg-BG');
+    const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    function node(tag, className, text) {
+        const el = document.createElement(tag); if (className) el.className = className;
+        if (text !== undefined) el.textContent = text; return el;
     }
-
-    // ==========================================
-    // МАРКИРАНЕ НА НАМЕРЕНИТЕ ДУМИ
-    // ==========================================
-
+    function icon(name) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttribute('href', '/images/icons.svg#' + name); svg.append(use); return svg;
+    }
     function highlight(parent, text) {
-        const value = (text ?? '').toString();
-
-        if (!value) {
-            parent.textContent = '—';
-            return;
+        const value = String(text ?? '');
+        if (!state.terms.length) { parent.textContent = value; return; }
+        const regex = new RegExp('(' + state.terms.map(escapeRegExp).join('|') + ')', 'gi');
+        value.split(regex).forEach((part, i) => parent.append(i % 2 ? node('mark', '', part) : document.createTextNode(part)));
+    }
+    function action(href, label, cls) { const a = node('a', cls, label); a.href = href; return a; }
+    function showError(message) { els.error.textContent = message; els.error.hidden = !message; }
+    function updateFavorite(button, id) {
+        const saved = favoriteIds.has(id);
+        button.setAttribute('aria-pressed', String(saved));
+        button.setAttribute('aria-label', (saved ? 'Премахни от любими: ' : 'Добави в любими: ') + button.dataset.reference);
+    }
+    function favoriteButton(property) {
+        const b = node('button', 'property-favorite'); b.type = 'button'; b.dataset.reference = property.referenceNumber;
+        b.append(icon('heart')); updateFavorite(b, property.id);
+        b.addEventListener('click', async () => {
+            if (!isAuthenticated) { window.location.assign(app.dataset.loginUrl); return; }
+            b.disabled = true; showError('');
+            try {
+                const response = await fetch(app.dataset.favoriteToggleUrl, {
+                    method: 'POST', headers: { Accept: 'application/json' },
+                    body: new URLSearchParams({ propertyId: String(property.id), __RequestVerificationToken: token || '' })
+                });
+                if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Не успяхме да запазим имота. Влезте отново или опитайте пак.');
+                const result = await response.json();
+                if (typeof result.isFavorite !== 'boolean') throw new Error('Не успяхме да запазим имота. Опитайте отново.');
+                result.isFavorite ? favoriteIds.add(property.id) : favoriteIds.delete(property.id);
+                updateFavorite(b, property.id);
+            } catch (error) { showError(error.message); }
+            finally { b.disabled = false; }
+        }); return b;
+    }
+    function propertyCard(p, index) {
+        const card = node('article', 'property-card'); card.style.animationDelay = Math.min(index * 35, 140) + 'ms';
+        const media = node('div', 'property-image');
+        const imageLink = action(link(app.dataset.detailsUrl, p.id), '', ''); imageLink.setAttribute('aria-label', 'Детайли за ' + p.referenceNumber);
+        const image = node('img'); image.alt = p.imagePath ? 'Снимка на имот ' + p.referenceNumber : 'Няма добавена снимка';
+        image.loading = index < 3 ? 'eager' : 'lazy'; image.decoding = 'async'; image.dataset.propertyPhoto = '';
+        const demoImage = /^\/images\/demo\/(apartment-plovdiv|house-sofia|land-varna|apartment-smirnenski|office-sofia|apartment-varna)\.jpg$/.test(p.imagePath || '');
+        image.src = demoImage || /^\/uploads\/properties\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(p.imagePath || '') ? p.imagePath : '/images/property-placeholder.svg';
+        if (demoImage) image.alt = 'Примерна снимка за демонстрационен имот ' + p.referenceNumber;
+        imageLink.append(image); media.append(imageLink, node('span', 'property-type', propertyTypes[p.type] || 'Имот'), favoriteButton(p));
+        const content = node('div', 'property-content'); const price = node('div', 'property-price'); highlight(price, format(p.price) + ' €');
+        const title = node('h3', 'property-title');
+        const titleLink = action(link(app.dataset.detailsUrl, p.id), '', '');
+        const name = Number(p.type) === 0 && p.rooms ? `${p.rooms}-стаен апартамент` : propertyTypes[p.type] || 'Имот';
+        highlight(titleLink, name); title.append(titleLink);
+        const location = node('div', 'property-location'); location.append(icon('pin')); const locationText = node('span'); highlight(locationText, p.city + ' · ' + p.neighborhood); location.append(locationText);
+        const meta = node('div', 'property-meta'); const area = node('span'); area.append(icon('area')); const areaText = node('span'); highlight(areaText, format(p.area) + ' м²'); area.append(areaText); meta.append(area);
+        if (p.rooms != null) { const rooms = node('span'); rooms.append(icon('door'), document.createTextNode(p.rooms + ' стаи')); meta.append(rooms); }
+        const bottom = node('div', 'property-bottom'); const reference = node('span', 'property-reference'); highlight(reference, p.referenceNumber);
+        const detail = action(link(app.dataset.detailsUrl, p.id), 'Детайли ', 'property-detail-link'); detail.append(icon('arrow')); bottom.append(reference, detail);
+        content.append(price, title, location, meta, bottom);
+        if (isAdmin || (isBroker && app.dataset.currentUserId && p.ownerId === app.dataset.currentUserId)) {
+            const manage = node('div', 'property-manage'); manage.append(action(link(app.dataset.editUrl, p.id), 'Редакция', 'btn btn-sm btn-outline-primary'), action(link(app.dataset.deleteUrl, p.id), 'Изтрий', 'btn btn-sm btn-outline-danger')); content.append(manage);
         }
-
-        if (!state.terms.length) {
-            parent.textContent = value;
-            return;
-        }
-
-        const re = new RegExp(
-            '(' + state.terms.map(escapeRegExp).join('|') + ')',
-            'gi'
-        );
-
-        value.split(re).forEach((part, i) => {
-            if (!part) return;
-
-            if (i % 2 === 1) {
-                const mark = document.createElement('mark');
-                mark.textContent = part;
-                parent.appendChild(mark);
-            } else {
-                parent.appendChild(
-                    document.createTextNode(part)
-                );
-            }
-        });
+        card.append(media, content); return card;
     }
-
-    function cell(tr, text, addClass = '') {
-        const td = document.createElement('td');
-
-        if (addClass) {
-            td.className = addClass;
-        }
-
-        highlight(td, text);
-        tr.appendChild(td);
-
-        return td;
+    function applyFilter() {
+        state.terms = norm(els.filter.value).split(/\s+/).filter(Boolean);
+        state.filtered = state.all.filter(p => {
+            if (state.type !== '' && Number(p.type) !== Number(state.type)) return false;
+            const fields = [p.id, p.referenceNumber, propertyTypes[p.type], p.city, p.neighborhood, p.street, p.description, p.price, p.area, p.rooms, p.floor, p.contactPhone, p.contactEmail].map(norm);
+            return state.terms.every(term => fields.some(f => f.includes(term)));
+        }); state.page = 1; render();
     }
-
-    // ==========================================
-    // БУТОНИ ЗА ДЕЙСТВИЯ
-    // ==========================================
-
-    function actionButton(href, label, cls) {
-        const a = document.createElement('a');
-
-        a.href = href;
-        a.className = 'btn btn-sm ' + cls;
-        a.textContent = label;
-
-        return a;
+    function pageItem(label, page, active, disabled) {
+        const li = node('li', 'page-item' + (active ? ' active' : '') + (disabled ? ' disabled' : ''));
+        const b = node('button', 'page-link', label); b.type = 'button'; b.disabled = !!disabled;
+        b.setAttribute('aria-label', label === '‹' ? 'Предишна страница' : label === '›' ? 'Следваща страница' : 'Страница ' + label);
+        if (active) b.setAttribute('aria-current', 'page');
+        b.addEventListener('click', () => { state.page = page; render(); document.querySelector('.listing-toolbar').scrollIntoView({ block: 'start' }); }); li.append(b); return li;
     }
-
-    // ==========================================
-    // ГЕНЕРИРАНЕ НА РЕДОВЕТЕ В ТАБЛИЦАТА
-    // ==========================================
-
-    function renderRows(rows) {
-        els.body.replaceChildren();
-
-        if (!rows.length) {
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-
-            td.colSpan = 7;
-            td.className = 'text-center text-muted py-4';
-
-            td.textContent = state.all.length
-                ? 'Няма имоти, отговарящи на търсенето.'
-                : 'Все още няма обяви.';
-
-            tr.appendChild(td);
-            els.body.appendChild(tr);
-
-            return;
-        }
-
-        rows.forEach(c => {
-            const tr = document.createElement('tr');
-
-            cell(tr, c.id);
-            cell(tr, c.referenceNumber, 'fw-bold');
-            cell(tr, propertyTypes[c.type]);
-
-            cell(
-                tr,
-                `${c.city}, ${c.neighborhood}`
-            );
-
-            cell(
-                tr,
-                `${c.price.toLocaleString('bg-BG')} €`,
-                'text-success fw-semibold'
-            );
-
-            cell(tr, `${c.area} кв.м.`);
-
-            // Колона с действия.
-            const actions = document.createElement('td');
-            actions.className = 'text-end property-actions';
-
-            const group = document.createElement('div');
-            group.className = 'btn-group';
-
-            // Детайлите са публични.
-            group.appendChild(
-                actionButton(
-                    link(app.dataset.detailsUrl, c.id),
-                    'Детайли',
-                    'btn-outline-secondary'
-                )
-            );
-
-            group.appendChild(favoriteButton(c.id));
-
-            // Редакция и изтриване само за вписани потребители.
-            if (isAdmin || (currentUserId && c.ownerId === currentUserId)) {
-                group.appendChild(
-                    actionButton(
-                        link(app.dataset.editUrl, c.id),
-                        'Редакция',
-                        'btn-outline-primary'
-                    )
-                );
-
-                group.appendChild(
-                    actionButton(
-                        link(app.dataset.deleteUrl, c.id),
-                        'Изтрий',
-                        'btn-outline-danger'
-                    )
-                );
-            }
-
-            actions.appendChild(group);
-            tr.appendChild(actions);
-            els.body.appendChild(tr);
-        });
-    }
-
-    // ==========================================
-    // ПАГИНАЦИЯ
-    // ==========================================
-
-    function pageList(current, total) {
-        const pages = new Set([
-            1,
-            total,
-            current - 2,
-            current - 1,
-            current,
-            current + 1,
-            current + 2
-        ]);
-
-        const sorted = [...pages]
-            .filter(p => p >= 1 && p <= total)
-            .sort((a, b) => a - b);
-
-        const result = [];
-
-        sorted.forEach((p, i) => {
-            if (i && p - sorted[i - 1] > 1) {
-                result.push('…');
-            }
-
-            result.push(p);
-        });
-
-        return result;
-    }
-
-    function pageItem(
-        label,
-        page,
-        { active = false, disabled = false } = {}
-    ) {
-        const li = document.createElement('li');
-
-        li.className =
-            'page-item' +
-            (active ? ' active' : '') +
-            (disabled ? ' disabled' : '');
-
-        const a = document.createElement('a');
-
-        a.className = 'page-link';
-        a.href = '#';
-        a.textContent = label;
-
-        if (active) {
-            a.setAttribute('aria-current', 'page');
-        }
-
-        if (!disabled && !active) {
-            a.addEventListener('click', e => {
-                e.preventDefault();
-                state.page = page;
-                render();
-            });
-        } else {
-            a.addEventListener('click', e => {
-                e.preventDefault();
-            });
-        }
-
-        li.appendChild(a);
-
-        return li;
-    }
-
-    function renderPagination(totalPages) {
-        els.pagination.replaceChildren();
-
-        if (totalPages <= 1) return;
-
-        els.pagination.appendChild(
-            pageItem(
-                '«',
-                state.page - 1,
-                { disabled: state.page === 1 }
-            )
-        );
-
-        pageList(state.page, totalPages).forEach(p => {
-            if (p === '…') {
-                els.pagination.appendChild(
-                    pageItem('…', 0, { disabled: true })
-                );
-            } else {
-                els.pagination.appendChild(
-                    pageItem(p, p, { active: p === state.page })
-                );
-            }
-        });
-
-        els.pagination.appendChild(
-            pageItem(
-                '»',
-                state.page + 1,
-                { disabled: state.page === totalPages }
-            )
-        );
-    }
-
     function render() {
-        const total = state.filtered.length;
-
-        const totalPages = Math.max(
-            1,
-            Math.ceil(total / state.pageSize)
-        );
-
-        state.page = Math.min(
-            state.page,
-            totalPages
-        );
-
-        const start =
-            (state.page - 1) * state.pageSize;
-
-        const rows = state.filtered.slice(
-            start,
-            start + state.pageSize
-        );
-
-        renderRows(rows);
-        renderPagination(totalPages);
-
-        els.info.textContent = total
-            ? `Показани ${start + 1}–${start + rows.length} от ${total}` +
-            (total !== state.all.length
-                ? ` (общо ${state.all.length})`
-                : '')
-            : '';
+        if (!state.loaded) return;
+        const total = state.filtered.length, pages = Math.max(1, Math.ceil(total / state.pageSize)); state.page = Math.min(state.page, pages);
+        const start = (state.page - 1) * state.pageSize; const rows = state.filtered.slice(start, start + state.pageSize);
+        els.body.replaceChildren(...rows.map(propertyCard)); els.body.setAttribute('aria-busy', 'false');
+        if (!rows.length) {
+            const empty = node('div', 'empty-state'); empty.append(icon('search'), node('h2', '', state.original.length ? 'Няма съвпадащи имоти' : 'Все още няма обяви'), node('p', '', 'Опитайте с други критерии или изчистете търсенето.')); els.body.append(empty);
+        }
+        els.pagination.replaceChildren();
+        if (pages > 1) {
+            els.pagination.append(pageItem('‹', state.page - 1, false, state.page === 1));
+            const visible = [...new Set([1, pages, state.page - 1, state.page, state.page + 1])].filter(p => p > 0 && p <= pages).sort((a, b) => a - b);
+            visible.forEach((p, i) => { if (i && p - visible[i - 1] > 1) els.pagination.append(pageItem('…', 0, false, true)); els.pagination.append(pageItem(String(p), p, p === state.page, false)); });
+            els.pagination.append(pageItem('›', state.page + 1, false, state.page === pages));
+        }
+        els.info.textContent = total ? `Показани ${start + 1}–${start + rows.length} от ${total} имота` : '0 имота';
     }
-
-    // ==========================================
-    // СЪБИТИЯ ЗА ФИЛТРИРАНЕ И ПАГИНАЦИЯ
-    // ==========================================
-
-    function debounce(fn, ms) {
-        let t;
-
-        return (...args) => {
-            clearTimeout(t);
-
-            t = setTimeout(
-                () => fn(...args),
-                ms
-            );
-        };
-    }
-
-    els.filter.addEventListener(
-        'input',
-        debounce(applyFilter, 150)
-    );
-
-    els.pageSize.addEventListener('change', () => {
-        state.pageSize = parseInt(
-            els.pageSize.value,
-            10
-        );
-
-        state.page = 1;
-        render();
-    });
-
-    // ==========================================
-    // GEMINI AI ТЪРСЕНЕ
-    // ==========================================
-
-    const aiForm = document.getElementById(
-        'properties-ai-form'
-    );
-
-    const aiQuery = document.getElementById(
-        'properties-ai-query'
-    );
-
-    const aiSubmit = document.getElementById(
-        'properties-ai-submit'
-    );
-
-    const aiReset = document.getElementById(
-        'properties-ai-reset'
-    );
-
-    const aiStatus = document.getElementById(
-        'properties-ai-status'
-    );
-
-    const aiProvider = document.getElementById(
-        'properties-ai-provider'
-    );
-
-    let originalProperties = [];
-
-    aiForm.addEventListener('submit', async e => {
-        e.preventDefault();
-
-        aiSubmit.disabled = true;
-
-        aiProvider.className = 'badge bg-secondary ms-2 d-none';
-        aiProvider.textContent = '';
-
-        aiStatus.className = 'small mt-2 text-muted';
-        aiStatus.textContent = 'ИИ обработва заявката...';
-
+    let filterTimer;
+    els.filter.addEventListener('input', () => { clearTimeout(filterTimer); filterTimer = setTimeout(applyFilter, 150); });
+    els.pageSize.addEventListener('change', () => { state.pageSize = Number(els.pageSize.value); state.page = 1; render(); });
+    app.querySelectorAll('[data-property-type]').forEach(b => b.addEventListener('click', () => {
+        state.type = b.dataset.propertyType; app.querySelectorAll('[data-property-type]').forEach(el => el.setAttribute('aria-pressed', String(el === b))); applyFilter();
+    }));
+    function resetTypes() { state.type = ''; app.querySelectorAll('[data-property-type]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.propertyType === ''))); }
+    function hideProvider() { aiProvider.className = 'badge bg-secondary d-none'; aiProvider.textContent = ''; }
+    let aiController;
+    aiForm.addEventListener('submit', async event => {
+        event.preventDefault(); if (!state.loaded) return;
+        aiController?.abort(); const controller = new AbortController(); aiController = controller;
+        aiSubmit.disabled = true; aiForm.setAttribute('aria-busy', 'true'); hideProvider(); showError('');
+        aiStatus.className = 'ai-status small mt-2 text-muted'; aiStatus.textContent = 'Търсим подходящите имоти…';
         try {
-            const response = await fetch(
-                app.dataset.aiUrl,
-                {
-                    method: 'POST',
-                    headers: {
-                        Accept: 'application/json'
-                    },
-                    body: new FormData(aiForm)
-                }
-            );
-
+            const response = await fetch(app.dataset.aiUrl, { method: 'POST', headers: { Accept: 'application/json' }, body: new FormData(aiForm), signal: controller.signal });
+            if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Търсенето временно не е достъпно. Опитайте отново.');
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.error || 'Грешка при търсенето.'
-                );
-            }
-
-            state.all = data.properties;
-            els.filter.value = '';
-
-            applyFilter();
-
-            const provider = data.provider || 'Неизвестен ИИ модел';
-            const usedFallback = data.usedFallback === true;
-            const isLocal = provider.startsWith('Локален модел');
-
-            aiProvider.textContent = usedFallback
-                ? `${provider} (резервен)`
-                : provider;
-
-            aiProvider.className = usedFallback
-                ? 'badge bg-warning text-dark ms-2'
-                : isLocal
-                    ? 'badge bg-success ms-2'
-                    : 'badge bg-primary ms-2';
-
-            aiStatus.className =
-                'small mt-2 text-success';
-
-            aiStatus.textContent =
-                (data.explanation || 'Готово.') +
-                ` Намерени имоти: ${data.properties.length}.`;
-
-        } catch (err) {
-            aiStatus.className =
-                'small mt-2 text-danger';
-
-            aiStatus.textContent =
-                err.message;
-
-            aiProvider.className = 'badge bg-secondary ms-2 d-none';
-            aiProvider.textContent = '';
-
-        } finally {
-            aiSubmit.disabled = false;
-        }
+            if (!response.ok || !Array.isArray(data.properties)) throw new Error(data.error || 'Неуспешно търсене.');
+            state.all = data.properties; els.filter.value = ''; resetTypes(); applyFilter();
+            const provider = data.provider || 'ИИ'; const fallback = data.usedFallback === true;
+            aiProvider.textContent = fallback ? `${provider} (резервен)` : provider;
+            aiProvider.className = fallback ? 'badge bg-warning text-dark' : provider.startsWith('Локален модел') ? 'badge bg-success' : 'badge bg-primary';
+            aiStatus.className = 'ai-status small mt-2 text-success'; aiStatus.textContent = (data.explanation || 'Готово.') + ` Намерени имоти: ${data.properties.length}.`;
+        } catch (error) { if (error.name !== 'AbortError') { aiStatus.className = 'ai-status small mt-2 text-danger'; aiStatus.textContent = error.message; hideProvider(); } }
+        finally { if (aiController === controller) { aiController = null; aiSubmit.disabled = false; aiForm.setAttribute('aria-busy', 'false'); } }
     });
-
-    // ==========================================
-    // ИЗЧИСТВАНЕ НА GEMINI ТЪРСЕНЕТО
-    // ==========================================
-
     aiReset.addEventListener('click', () => {
-        aiQuery.value = '';
-        aiStatus.textContent = '';
-        aiProvider.className = 'badge bg-secondary ms-2 d-none';
-        aiProvider.textContent = '';
-        els.filter.value = '';
-
-        state.all = originalProperties.slice();
-
-        applyFilter();
+        aiController?.abort(); aiController = null; aiSubmit.disabled = !state.loaded; aiForm.setAttribute('aria-busy', 'false'); aiQuery.value = ''; aiStatus.textContent = ''; hideProvider(); els.filter.value = ''; resetTypes(); showError(''); state.all = state.original.slice(); applyFilter();
     });
-
-    // ==========================================
-    // ПЪРВОНАЧАЛНО ЗАРЕЖДАНЕ НА ИМОТИТЕ
-    // ==========================================
-
-    if (isAuthenticated) {
-        fetch(app.dataset.favoriteIdsUrl, { headers: { Accept: 'application/json' } })
-            .then(r => r.ok ? r.json() : [])
-            .then(ids => {
-                ids.forEach(id => favoriteIds.add(id));
-                render();
-            })
-            .catch(() => {});
-    }
-
-    fetch(app.dataset.listUrl, {
-        headers: {
-            Accept: 'application/json'
-        }
-    })
-        .then(r => {
-            if (!r.ok) {
-                throw new Error(r.statusText);
+    app.querySelectorAll('[data-ai-prompt]').forEach(b => b.addEventListener('click', () => { aiQuery.value = b.dataset.aiPrompt; aiQuery.focus(); }));
+    async function load() {
+        aiSubmit.disabled = true;
+        try {
+            const response = await fetch(app.dataset.listUrl, { headers: { Accept: 'application/json' } });
+            if (!response.ok) throw new Error(); const properties = await response.json(); if (!Array.isArray(properties)) throw new Error();
+            if (isAuthenticated) {
+                try {
+                    const result = await fetch(app.dataset.favoriteIdsUrl, { headers: { Accept: 'application/json' } });
+                    if (!result.ok || !result.headers.get('content-type')?.includes('application/json')) throw new Error();
+                    const ids = await result.json(); ids.forEach(id => favoriteIds.add(id));
+                } catch { showError('Любимите имоти не могат да бъдат заредени. Обновете страницата, за да видите актуалното им състояние.'); }
             }
-
-            return r.json();
-        })
-        .then(data => {
-            originalProperties = data;
-            state.all = data;
-
-            applyFilter();
-        })
-        .catch(() => {
-            els.body.replaceChildren();
-
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-
-            td.colSpan = 7;
-            td.className =
-                'text-center text-danger py-4';
-
-            td.textContent =
-                'Грешка при зареждане на обявите.';
-
-            tr.appendChild(td);
-            els.body.appendChild(tr);
-        });
-
+            state.original = properties; state.all = properties; state.loaded = true; aiSubmit.disabled = false; applyFilter();
+        } catch {
+            els.body.replaceChildren(); els.body.setAttribute('aria-busy', 'false');
+            const empty = node('div', 'empty-state'); empty.append(node('h2', '', 'Не успяхме да заредим обявите.'));
+            const retry = node('button', 'btn btn-outline-primary', 'Опитай отново'); retry.type = 'button'; retry.addEventListener('click', () => { els.body.setAttribute('aria-busy', 'true'); load(); }); empty.append(retry); els.body.append(empty);
+        }
+    }
+    load();
 })();

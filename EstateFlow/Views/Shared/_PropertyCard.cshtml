@@ -1,0 +1,32 @@
+@model EstateFlow.Models.Property
+@using EstateFlow.Services
+@{
+    var favoritePage = ViewData["IsFavoritesPage"] is true;
+    var canManage = User.IsInRole("Admin") || (User.IsInRole("Broker") && Model.OwnerId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+    var title = Model.Type == PropertyType.Apartment && Model.Rooms.HasValue ? $"{Model.Rooms}-стаен апартамент" : null;
+}
+<article class="property-card">
+    <div class="property-image">
+        <a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.Id" aria-label="Детайли за @Model.ReferenceNumber"><img src="@PropertyImageService.DisplayPath(Model.ImagePath)" alt="@(Model.ImagePath is null ? "Няма добавена снимка" : "Снимка на имот " + Model.ReferenceNumber)" loading="lazy" data-property-photo /></a>
+        <span class="property-type">@Html.DisplayFor(m => m.Type)</span>
+        @if (favoritePage)
+        {
+            <form asp-controller="Favorites" asp-action="Toggle" method="post">
+                <input type="hidden" name="propertyId" value="@Model.Id" />
+                <input type="hidden" name="returnUrl" value="@Url.Action("Index", "Favorites")" />
+                <button class="property-favorite" type="submit" aria-pressed="true" aria-label="Премахни от любими: @Model.ReferenceNumber"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#heart" /></svg></button>
+            </form>
+        }
+    </div>
+    <div class="property-content">
+        <div class="property-price">@Model.Price.ToString("N0") €</div>
+        <h2 class="property-title"><a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.Id">@if (title is not null) { @title } else { @Html.DisplayFor(m => m.Type) }</a></h2>
+        <div class="property-location"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#pin" /></svg><span>@Model.City · @Model.Neighborhood</span></div>
+        <div class="property-meta"><span><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#area" /></svg>@Model.Area.ToString("N0") м²</span>@if (Model.Rooms.HasValue) { <span><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#door" /></svg>@Model.Rooms стаи</span> }</div>
+        <div class="property-bottom"><span class="property-reference">@Model.ReferenceNumber</span><a class="property-detail-link" asp-controller="Properties" asp-action="Details" asp-route-id="@Model.Id">Детайли<svg class="icon" aria-hidden="true"><use href="/images/icons.svg#arrow" /></svg></a></div>
+        @if (canManage)
+        {
+            <div class="property-manage"><a asp-controller="Properties" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Редакция</a><a asp-controller="Properties" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger">Изтрий</a></div>
+        }
+    </div>
+</article>

@@ -20,6 +20,19 @@ public class Property
     // Identity user ID; null for existing/seeded listings. Never bound from a form.
     public string? OwnerId { get; set; }
 
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string? ImagePath { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Display(Name = "Основна снимка")]
+    public IFormFile? Photo { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Display(Name = "Премахни текущата снимка")]
+    public bool RemovePhoto { get; set; }
+
     [Display(Name = "Реф. номер")]
     [Required(ErrorMessage = "Референтният номер е задължителен.")]
     [StringLength(9, MinimumLength = 9, ErrorMessage = "Форматът трябва да е точно 9 символа (напр. SOF-12345).")]

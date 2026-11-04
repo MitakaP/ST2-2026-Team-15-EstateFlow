@@ -45,3 +45,6 @@ secrets.json
 
 # Optional local inference server model storage
 LocalLlmServer/models/
+# Uploaded property cover images
+**/wwwroot/uploads/properties/*
+!**/wwwroot/uploads/properties/.gitkeep

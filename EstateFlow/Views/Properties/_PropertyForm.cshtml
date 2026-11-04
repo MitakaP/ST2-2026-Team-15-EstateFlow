@@ -1,8 +1,23 @@
-﻿@model EstateFlow.Models.Property
+@model EstateFlow.Models.Property
 
 <input type="hidden" asp-for="Id" />
 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
+<section class="photo-upload mb-4" aria-labelledby="photo-upload-title">
+    <div>
+        <p class="eyebrow" id="photo-upload-title">Първото впечатление</p>
+        <label asp-for="Photo" class="form-label"></label>
+        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" aria-describedby="property-photo-help" />
+        <span asp-validation-for="Photo" class="text-danger small"></span>
+        <p class="form-text" id="property-photo-help">Основна снимка на имота — JPG, PNG или WebP до 5 MB. Незадължително.</p>
+        @if ((EstateFlow.Services.PropertyImageService.IsManagedPath(Model.ImagePath) || EstateFlow.Data.DemoPropertyCatalog.IsImage(Model.ImagePath)))
+        {
+            <label class="form-check mt-2"><input asp-for="RemovePhoto" class="form-check-input" /><span class="form-check-label">Премахни текущата снимка</span></label>
+        }
+        <p id="property-photo-error" class="text-danger small" role="alert" hidden></p>
+    </div>
+    <img id="property-photo-preview" src="@EstateFlow.Services.PropertyImageService.DisplayPath(Model.ImagePath)" alt="Преглед на основната снимка" />
+</section>
 <div class="row g-3">
     <div class="col-md-6">
         <label asp-for="ReferenceNumber" class="form-label"></label>

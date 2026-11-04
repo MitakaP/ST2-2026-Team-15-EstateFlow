@@ -1,31 +1,11 @@
 @model IReadOnlyList<EstateFlow.Models.Property>
 @{ ViewData["Title"] = "Моите имоти"; }
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">Моите имоти</h1>
-    <a asp-action="Create" class="btn btn-primary">+ Добави имот</a>
-</div>
+<div class="page-heading animate-in"><div><p class="eyebrow">Твоите обяви</p><h1>Моите имоти</h1><p class="text-muted small mt-2 mb-0">Управлявай обявите и представи всеки имот по най-добрия начин.</p></div><a asp-action="Create" class="btn btn-primary"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#plus" /></svg>Добави имот</a></div>
 @if (Model.Count == 0)
 {
-    <div class="alert alert-info">Все още нямате добавени имоти.</div>
+    <div class="empty-state"><svg class="icon" aria-hidden="true"><use href="/images/icons.svg#building" /></svg><h2>Първата ти обява те очаква</h2><p>Добави основна снимка, описание и детайли за имота.</p><a asp-action="Create" class="btn btn-primary">Създай обява</a></div>
 }
 else
 {
-    <div class="table-responsive"><table class="table table-striped align-middle">
-        <thead><tr><th>Реф. номер</th><th>Местоположение</th><th>Цена</th><th class="text-end">Действия</th></tr></thead>
-        <tbody>
-        @foreach (var property in Model)
-        {
-            <tr>
-                <td>@property.ReferenceNumber</td>
-                <td>@property.City, @property.Neighborhood</td>
-                <td>@property.Price.ToString("N0") €</td>
-                <td class="text-end">
-                    <a asp-action="Details" asp-route-id="@property.Id" class="btn btn-sm btn-outline-secondary">Детайли</a>
-                    <a asp-action="Edit" asp-route-id="@property.Id" class="btn btn-sm btn-outline-primary">Редакция</a>
-                    <a asp-action="Delete" asp-route-id="@property.Id" class="btn btn-sm btn-outline-danger">Изтрий</a>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table></div>
+    <div class="property-grid">@foreach (var property in Model) { <partial name="_PropertyCard" model="property" /> }</div>
 }

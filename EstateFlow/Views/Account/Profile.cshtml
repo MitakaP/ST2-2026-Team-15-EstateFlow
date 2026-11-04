@@ -1,6 +1,6 @@
 @model EstateFlow.ViewModels.ProfileDisplayViewModel
 @{ ViewData["Title"] = "Моят профил"; }
-<div class="card shadow-sm mx-auto" style="max-width:760px">
+<div class="card profile-panel animate-in">
   <div class="card-body p-4">
     <div class="d-flex align-items-center gap-3 mb-3">
       @if (!string.IsNullOrWhiteSpace(Model.ProfileImagePath))

@@ -1,6 +1,6 @@
 @model EstateFlow.ViewModels.ProfileEditViewModel
 @{ ViewData["Title"] = "Редактиране на профила"; }
-<div class="card shadow-sm mx-auto" style="max-width:760px"><div class="card-body p-4">
+<div class="card profile-panel animate-in"><div class="card-body p-4">
 <h1 class="h3 mb-4">Редактиране на профила</h1>
 <form asp-action="EditProfile" method="post" enctype="multipart/form-data">
  @Html.AntiForgeryToken()

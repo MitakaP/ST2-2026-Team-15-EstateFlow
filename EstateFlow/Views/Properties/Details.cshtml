@@ -22,11 +22,8 @@
         : null;
 }
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-    <div>
-        <p class="text-uppercase text-muted small fw-semibold mb-1">EstateFlow · Детайли на имот</p>
-        <h1 class="h3 mb-0">Обява: @Model.ReferenceNumber</h1>
-    </div>
+<div class="page-heading animate-in">
+    <div><p class="eyebrow">Открий своето място</p><h1>@Html.DisplayFor(m => m.Type) в @Model.City</h1><p class="text-muted small mt-2 mb-0">@Model.Neighborhood · @Model.ReferenceNumber</p></div>
     @if (User.Identity?.IsAuthenticated == true)
     {
         <form id="details-favorite-form" class="favorite-detail-form"
@@ -61,182 +58,36 @@
         </a>
     }
 </div>
-
-<div class="card shadow-sm">
-    <div class="card-body">
-
-        <!-- ОСНОВНА ИНФОРМАЦИЯ -->
-        <h5 class="card-title text-primary mb-4">
-            Основна информация
-        </h5>
-
-        <dl class="row mb-0">
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.Type)
-            </dt>
-            <dd class="col-sm-9">
-                @Html.DisplayFor(m => m.Type)
-            </dd>
-
-            <dt class="col-sm-3">Цена</dt>
-            <dd class="col-sm-9 fw-bold text-success">
-                @Model.Price.ToString("N0") €
-            </dd>
-
-            <dt class="col-sm-3">Площ</dt>
-            <dd class="col-sm-9">
-                @Model.Area кв.м.
-            </dd>
-
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.Rooms)
-            </dt>
-            <dd class="col-sm-9">
-                @(Model.Rooms?.ToString() ?? "—")
-            </dd>
-
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.Floor)
-            </dt>
-            <dd class="col-sm-9">
-                @(Model.Floor?.ToString() ?? "—")
-            </dd>
-        </dl>
-
-        <hr />
-
-        <!-- ЛОКАЦИЯ -->
-        <h5 class="card-title text-primary mb-4">
-            Локация
-        </h5>
-
-        <dl class="row mb-0">
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.City)
-            </dt>
-            <dd class="col-sm-9">
-                @Model.City
-            </dd>
-
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.Neighborhood)
-            </dt>
-            <dd class="col-sm-9">
-                @Model.Neighborhood
-            </dd>
-
-            <dt class="col-sm-3">
-                @Html.DisplayNameFor(m => m.Street)
-            </dt>
-            <dd class="col-sm-9">
-                @(Model.Street ?? "—")
-            </dd>
-        </dl>
-
-        <!-- GOOGLE MAPS -->
-        <div class="mt-4">
-            <h6 class="fw-semibold mb-3">
-                <i class="bi bi-geo-alt-fill me-2"></i>
-                Местоположение на картата
-            </h6>
-
+<div class="detail-layout">
+    <div>
+        <img src="@PropertyImageService.DisplayPath(Model.ImagePath)" alt="Снимка на имот @Model.ReferenceNumber" class="detail-cover" data-property-photo />
+        <section class="card detail-section"><div class="card-body"><h2>За имота</h2><p class="detail-description mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Няма добавено описание." : Model.Description)</p></div></section>
+        <section class="card detail-section"><div class="card-body"><h2>Локация</h2>
+            <p class="text-muted small">@Model.City · @Model.Neighborhood @if (!string.IsNullOrWhiteSpace(Model.Street)) { <span>· @Model.Street</span> }</p>
             @if (embedUrl is not null)
             {
-                <div class="ratio ratio-16x9 rounded overflow-hidden border">
-                    <iframe src="@embedUrl"
-                            title="Карта на имот @Model.ReferenceNumber"
-                            loading="lazy"
-                            referrerpolicy="strict-origin-when-cross-origin"
-                            allowfullscreen>
-                    </iframe>
-                </div>
-
-                <div class="d-flex justify-content-between
-                            align-items-center gap-3 mt-3 flex-wrap">
-
-                    <small class="text-muted">
-                        Локацията е определена по въведения адрес
-                        и може да е приблизителна.
-                    </small>
-
-                    <a href="@mapsLink"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>
-                        Отвори в Google Maps
-                    </a>
-                </div>
+                <div class="ratio ratio-16x9 rounded overflow-hidden border"><iframe src="@embedUrl" title="Карта на имот @Model.ReferenceNumber" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+                <div class="d-flex justify-content-between align-items-center gap-3 mt-3 flex-wrap"><small class="text-muted">Местоположението е определено по адреса и може да е приблизително.</small><a href="@mapsLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Отвори в Google Maps</a></div>
             }
             else
+            { <p class="alert alert-info mb-0">Няма достатъчно информация за местоположението на този имот.</p> }
+        </div></section>
+    </div>
+    <aside class="detail-aside">
+        <section class="card"><div class="card-body"><p class="eyebrow">Твоят следващ адрес</p><div class="detail-price">@Model.Price.ToString("N0") €</div>
+            <div class="detail-facts"><span>@Model.Area.ToString("N0") м²</span>@if (Model.Rooms.HasValue) { <span>@Model.Rooms стаи</span> }@if (Model.Floor.HasValue) { <span>Етаж @Model.Floor</span> }</div>
+            <hr /><h2 class="h6 mt-4">Свържи се с брокера</h2><a class="contact-link" href="tel:@Model.ContactPhone">@Model.ContactPhone</a><a class="contact-link" href="mailto:@Model.ContactEmail">@Model.ContactEmail</a>
+            <p class="text-muted small mt-3 mb-0">При запитване посочи реф. номер @Model.ReferenceNumber.</p>
+        </div></section>
+        <div class="d-flex gap-2 flex-wrap mt-3">
+            @if (User.IsInRole("Admin") || (User.IsInRole("Broker") && Model.OwnerId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
             {
-                <div class="alert alert-light border" role="status">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Няма достатъчно информация за
-                    местоположението на този имот.
-                </div>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Редакция</a><a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">Изтриване</a>
             }
+            <a asp-action="Index" class="btn btn-outline-secondary">Към обявите</a>
         </div>
-
-        <hr />
-
-        <!-- КОНТАКТИ С БРОКЕР -->
-        <h5 class="card-title text-primary mb-4">
-            Контакти с брокер
-        </h5>
-
-        <dl class="row mb-0">
-            <dt class="col-sm-3">Телефон</dt>
-            <dd class="col-sm-9">
-                @Model.ContactPhone
-            </dd>
-
-            <dt class="col-sm-3">Имейл</dt>
-            <dd class="col-sm-9">
-                <a href="mailto:@Model.ContactEmail">
-                    @Model.ContactEmail
-                </a>
-            </dd>
-        </dl>
-
-        <hr />
-
-        <!-- ОПИСАНИЕ -->
-        <h5 class="card-title text-primary mb-3">
-            Описание
-        </h5>
-
-        <p class="text-muted" style="white-space: pre-wrap;">@(Model.Description ?? "Няма добавено описание.")</p>
-
-    </div>
-
-    <!-- БУТОНИ -->
-    <div class="card-footer d-flex gap-2 flex-wrap">
-
-        @if (User.IsInRole("Admin") || (User.IsInRole("Broker") && Model.OwnerId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
-        {
-            <a asp-action="Edit"
-               asp-route-id="@Model.Id"
-               class="btn btn-primary">
-                Редакция
-            </a>
-
-            <a asp-action="Delete"
-               asp-route-id="@Model.Id"
-               class="btn btn-outline-danger">
-                Изтриване
-            </a>
-        }
-
-        <a asp-action="Index"
-           class="btn btn-outline-secondary">
-            Назад
-        </a>
-
-    </div>
-
+    </aside>
 </div>
-
 @section Scripts {
     <script src="~/js/property-details-favorite.js" asp-append-version="true"></script>
 }

@@ -17,15 +17,18 @@ public class PropertiesController : Controller
     private readonly IDatabase _db;
     private readonly ApplicationDbContext _identityDb;
     private readonly IGeminiPropertyService _gemini;
+    private readonly PropertyImageService _images;
 
     public PropertiesController(
         IDatabase db,
         IGeminiPropertyService gemini,
-        ApplicationDbContext identityDb)
+        ApplicationDbContext identityDb,
+        PropertyImageService images)
     {
         _db = db;
         _gemini = gemini;
         _identityDb = identityDb;
+        _images = images;
     }
 
     /// <summary>
@@ -138,13 +141,23 @@ public class PropertiesController : Controller
     [HttpPost]
     [Authorize(Roles = AppRoles.Broker + "," + AppRoles.Admin)]
     [ValidateAntiForgeryToken]
-    public IActionResult Create(Property property)
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Create(Property property, CancellationToken cancellationToken)
     {
         property.OwnerId = CurrentUserId;
         if (property.OwnerId is null) return Forbid();
-        if (!ModelState.IsValid ||
-            !TrySave(() => _db.Add(property)))
+        // ImagePath is assigned by the server only; files cannot be selected by posting a path.
+        property.ImagePath = null;
+        if (!ModelState.IsValid) return View(property);
+        var uploaded = await UploadPhotoAsync(property, cancellationToken);
+        if (!ModelState.IsValid) return View(property);
+        property.ImagePath = uploaded;
+        var saved = false;
+        try { saved = TrySave(() => _db.Add(property)); }
+        finally { if (!saved) _images.Delete(uploaded); }
+        if (!saved)
         {
+            property.ImagePath = null;
             return View(property);
         }
 
@@ -171,7 +184,8 @@ public class PropertiesController : Controller
     [HttpPost]
     [Authorize(Roles = AppRoles.Broker + "," + AppRoles.Admin)]
     [ValidateAntiForgeryToken]
-    public IActionResult Edit(int id, Property property)
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Edit(int id, Property property, CancellationToken cancellationToken)
     {
         if (id != property.Id)
         {
@@ -183,17 +197,29 @@ public class PropertiesController : Controller
         if (!CanManage(existing)) return Forbid();
         property.OwnerId = existing.OwnerId; // never trust a posted owner ID
 
-        if (!ModelState.IsValid ||
-            !TrySave(() =>
+        property.ImagePath = existing.ImagePath;
+        if (!ModelState.IsValid) return View(property);
+        var uploaded = await UploadPhotoAsync(property, cancellationToken);
+        if (!ModelState.IsValid) return View(property);
+        property.ImagePath = uploaded ?? (property.RemovePhoto ? null : existing.ImagePath);
+        var saved = false;
+        try
+        {
+            saved = TrySave(() =>
             {
-                var saved = User.IsInRole(AppRoles.Admin)
+                var updated = User.IsInRole(AppRoles.Admin)
                     ? _db.Update(property)
                     : _db.UpdateOwned(property, CurrentUserId!);
-                if (!saved) throw new InvalidOperationException("Имотът вече не е достъпен за редакция.");
-            }))
+                if (!updated) throw new InvalidOperationException("Имотът вече не е достъпен за редакция.");
+            });
+        }
+        finally { if (!saved) _images.Delete(uploaded); }
+        if (!saved)
         {
+            property.ImagePath = existing.ImagePath;
             return View(property);
         }
+        if (property.ImagePath != existing.ImagePath) _images.Delete(existing.ImagePath);
 
         TempData["Message"] =
             $"Имотът с реф. номер „{property.ReferenceNumber}“ е обновен.";
@@ -230,11 +256,24 @@ public class PropertiesController : Controller
             : _db.DeleteOwned(id, CurrentUserId!);
         if (deleted)
         {
+            _images.Delete(existing.ImagePath);
             TempData["Message"] =
                 "Имотът е изтрит успешно.";
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<string?> UploadPhotoAsync(Property property, CancellationToken cancellationToken)
+    {
+        if (property.Photo is null) return null;
+        try { return await _images.SaveAsync(property.Photo, cancellationToken); }
+        catch (ArgumentException ex) { ModelState.AddModelError(nameof(Property.Photo), ex.Message); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(nameof(Property.Photo), "Снимката не може да бъде запазена. Опитайте отново.");
+        }
+        return null;
     }
 
     // ==========================================

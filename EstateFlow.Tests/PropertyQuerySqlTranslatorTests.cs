@@ -15,7 +15,7 @@ public class PropertyQuerySqlTranslatorTests
     public void CityEquals_UsesParameter_NotEmbeddedValue()
     {
         var command = PropertyQuerySqlTranslator.Translate(Query("City", "equals", "Пловдив"));
-        Assert.Contains("LOWER(City) = LOWER($p0)", command.Sql);
+        Assert.Contains("EFLOW_LOWER(City) = EFLOW_LOWER($p0)", command.Sql);
         Assert.DoesNotContain("Пловдив", command.Sql);
         Assert.Equal("Пловдив", command.Parameters["$p0"]);
     }

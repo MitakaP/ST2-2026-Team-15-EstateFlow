@@ -53,18 +53,18 @@ public sealed class LocalLlmPropertyService : ILocalLlmPropertyService
 
         try
         {
-            var prompt =
-                GeminiPropertyService.Instruction +
-                "\n\nUSER REQUEST:\n" +
-                userText +
-                "\n\nOUTPUT JSON:";
-
             var requestBody = new LocalChatCompletionRequest
             {
                 Model = _options.Model,
                 Messages =
                 [
-                    new LocalChatMessage("user", prompt)
+                    new LocalChatMessage(
+                        "system",
+                        GeminiPropertyService.Instruction),
+
+                    new LocalChatMessage(
+                        "user",
+                        userText)
                 ],
                 Temperature = _options.Temperature,
                 Stream = false,
